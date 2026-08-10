@@ -4,7 +4,9 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useEffect, useRef, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
-import { sendMsg, addListener } from "../hooks/useSocket";
+import { useLocalServer } from "../hooks/useLocalServer";
+import ChessLANFooter from "../components/ChessLANFooter";
+import IPConfigReminder from "../components/IPConfigReminder";
 
 export default function HostGame() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -16,27 +18,49 @@ export default function HostGame() {
     variant: "standard",
   };
   const [flipped, setFlipped] = useState(false);
-  const [roomCode, setRoomCode] = useState<string | null>(null);
-  const [opponentName, setOpponentName] = useState<string | null>(null);
-  const [chess960Fen, setChess960Fen] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  const localServer = useLocalServer();
+  const { roomCode, guestUsername: opponentName, needsRestart, startServer, stopServer, forceCleanup, updateColor, startGame: startLocalGame } = localServer;
 
   const slideAnim = useRef(new Animated.Value(80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    sendMsg({ type: "create", username, mode, time, variant });
-    const remove = addListener((msg) => {
-      if (msg.type === "created") {
-        setRoomCode(msg.code);
-        if (msg.chess960Fen) setChess960Fen(msg.chess960Fen);
-      } else if (msg.type === "opponent_joined") {
-        setOpponentName(msg.guestUsername);
-      } else if (msg.type === "guest_left") {
-        setOpponentName(null);
+    const initConnection = async () => {
+      try {
+        // Force cleanup any existing server before starting
+        console.log('[HostGame] Initializing - cleaning up any existing server');
+        forceCleanup();
+        
+        // Wait a bit, then start the server
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        startServer({ username, mode, time, variant });
+        setConnectionError(null);
+      } catch (error) {
+        setConnectionError("Failed to start local server. Please try again.");
+        console.error("Server start error:", error);
       }
-    });
-    return () => remove();
+    };
+    
+    initConnection();
+    
+    return () => {
+      console.log('[HostGame] Unmounting - stopping server');
+      stopServer();
+    };
   }, []);
+
+  const handleRetry = () => {
+    setConnectionError(null);
+    try {
+      startServer({ username, mode, time, variant });
+    } catch (error) {
+      setConnectionError("Failed to start local server. Please try again.");
+      console.error("Server start error:", error);
+    }
+  };
 
   useEffect(() => {
     Animated.parallel([
@@ -55,7 +79,11 @@ export default function HostGame() {
   }, []);
 
   const handleBack = () => {
-    sendMsg({ type: "cancel" });
+    // If guest is present, notify them the room is closed
+    if (opponentName) {
+      localServer.sendMessage({ type: "room_closed" });
+    }
+    stopServer();
     Animated.parallel([
       Animated.timing(slideAnim, { toValue: 80, duration: 260, useNativeDriver: true }),
       Animated.timing(fadeAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
@@ -63,17 +91,16 @@ export default function HostGame() {
   };
 
   const handleStart = () => {
-    sendMsg({ type: "start", flipped, variant });
-    const remove = addListener((msg) => {
-      if (msg.type === "game_start") {
-        remove();
-        navigation.navigate("GameRoom", {
-          mode, time, username, flipped, variant,
-          opponentUsername: opponentName,
-          myColor: flipped ? "b" : "w",
-          chess960Fen: msg.chess960Fen || chess960Fen,
-        });
-      }
+    startLocalGame(flipped);
+    navigation.navigate("GameRoom", {
+      mode,
+      time,
+      username,
+      flipped,
+      variant,
+      opponentUsername: opponentName,
+      myColor: flipped ? "b" : "w",
+      isHost: true,
     });
   };
 
@@ -136,7 +163,7 @@ export default function HostGame() {
             onPress={() => {
               const next = !flipped;
               setFlipped(next);
-              if (opponentName) sendMsg({ type: "color_update", flipped: next });
+              if (opponentName) updateColor(next);
             }}
             style={styles.switchBtn}
             hitSlop={8}
@@ -174,11 +201,44 @@ export default function HostGame() {
             <Text style={styles.codeLabel}>Room Code</Text>
             <Text style={styles.codeText}>{roomCode}</Text>
             {!opponentName && (
-              <View style={styles.waitingRow}>
-                <ActivityIndicator color="white" size="small" />
-                <Text style={styles.waitingText}>Waiting for opponent…</Text>
-              </View>
+              <>
+                <View style={styles.waitingRow}>
+                  <ActivityIndicator color="white" size="small" />
+                  <Text style={styles.waitingText}>Waiting for opponent…</Text>
+                </View>
+                {/* IP Configuration Reminder */}
+                <View style={styles.ipReminderWrapper}>
+                  <IPConfigReminder variant="host" />
+                </View>
+              </>
             )}
+          </View>
+        )}
+        {connectionError && (
+          <View style={styles.errorBox}>
+            <MaterialIcons name="error-outline" size={24} color="#ff6b6b" />
+            <Text style={styles.errorText}>{connectionError}</Text>
+            <Pressable style={styles.retryBtn} onPress={handleRetry}>
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
+        {needsRestart && (
+          <View style={styles.restartBox}>
+            <MaterialIcons name="refresh" size={32} color="#ffa500" />
+            <Text style={styles.restartTitle}>App Restart Required</Text>
+            <Text style={styles.restartText}>
+              The network port is stuck at the system level. Please close and reopen the app completely.
+            </Text>
+            <Text style={styles.restartHint}>
+              (This happens after hot reloads in development)
+            </Text>
+          </View>
+        )}
+        {!roomCode && !connectionError && (
+          <View style={styles.connectingBox}>
+            <ActivityIndicator color="white" size="large" />
+            <Text style={styles.connectingText}>Connecting to server…</Text>
           </View>
         )}
         {opponentName && (
@@ -187,6 +247,8 @@ export default function HostGame() {
           </Pressable>
         )}
       </Animated.View>
+      
+      <ChessLANFooter />
     </SafeAreaView>
   );
 }
@@ -261,12 +323,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     padding: 28,
     paddingBottom: 48,
-    gap: 6,
+    gap: 4,
   },
   playerBox: {
     borderRadius: 18,
-    paddingVertical: 22,
-    paddingHorizontal: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     alignItems: "center",
   },
   playerBoxLight: { backgroundColor: "white", borderRadius: 18 },
@@ -280,7 +342,7 @@ const styles = StyleSheet.create({
   playerRoleDark: { color: "rgba(255,255,255,0.5)" },
   playerName: {
     fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 20,
+    fontSize: 18,
   },
   playerNameLight: { color: "#1a1a1a" },
   playerNameDark: { color: "white" },
@@ -289,7 +351,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   vsText: {
     fontFamily: "GoogleSansFlex_700Bold",
@@ -317,7 +379,7 @@ const styles = StyleSheet.create({
     marginTop: "auto",
     backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: 18,
-    padding: 24,
+    padding: 20,
     alignItems: "center",
     gap: 8,
   },
@@ -330,7 +392,7 @@ const styles = StyleSheet.create({
   },
   codeText: {
     fontFamily: "ArchivoBlack_400Regular",
-    fontSize: 38,
+    fontSize: 34,
     color: "white",
     letterSpacing: 8,
   },
@@ -344,5 +406,82 @@ const styles = StyleSheet.create({
     fontFamily: "GoogleSansFlex_400Regular",
     fontSize: 13,
     color: "rgba(255,255,255,0.7)",
+  },
+  errorBox: {
+    marginTop: "auto",
+    backgroundColor: "rgba(255,107,107,0.15)",
+    borderRadius: 18,
+    padding: 24,
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,107,107,0.3)",
+  },
+  errorText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 14,
+    color: "#ff6b6b",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  retryBtn: {
+    backgroundColor: "#ff6b6b",
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  retryBtnText: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 14,
+    color: "white",
+  },
+  connectingBox: {
+    marginTop: "auto",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 18,
+    padding: 32,
+    alignItems: "center",
+    gap: 16,
+  },
+  connectingText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
+  },
+  restartBox: {
+    marginTop: "auto",
+    backgroundColor: "rgba(255,165,0,0.15)",
+    borderRadius: 18,
+    padding: 24,
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 2,
+    borderColor: "rgba(255,165,0,0.4)",
+  },
+  restartTitle: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 16,
+    color: "#ffa500",
+    textAlign: "center",
+  },
+  restartText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.9)",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  restartHint: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.6)",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  ipReminderWrapper: {
+    marginTop: 12,
+    width: "100%",
+    alignItems: "stretch",
   },
 });

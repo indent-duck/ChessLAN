@@ -12,7 +12,9 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useEffect, useRef, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
-import { sendMsg, addListener } from "../hooks/useSocket";
+import { useLocalClient } from "../hooks/useLocalClient";
+import ChessLANFooter from "../components/ChessLANFooter";
+import IPConfigReminder from "../components/IPConfigReminder";
 
 export default function JoinGame() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -20,20 +22,22 @@ export default function JoinGame() {
   const { username } = route.params ?? { username: "" };
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
   const [joined, setJoined] = useState(false);
   const [hostUsername, setHostUsername] = useState<string | null>(null);
   const [flipped, setFlipped] = useState(false);
   const [mode, setMode] = useState<string>("Rapid");
   const [time, setTime] = useState<string>("10 min");
   const [variant, setVariant] = useState<string>("standard");
-  const [chess960Fen, setChess960Fen] = useState<string | null>(null);
 
-  // Use refs to track the latest mode and time values for use in the listener
+  const localClient = useLocalClient();
+  const { sendMessage, addMessageListener, disconnect } = localClient;
+
+  // Use refs to track the latest values for use in the listener
   const modeRef = useRef<string>("Rapid");
   const timeRef = useRef<string>("10 min");
   const hostUsernameRef = useRef<string | null>(null);
   const variantRef = useRef<string>("standard");
-  const chess960FenRef = useRef<string | null>(null);
 
   const slideAnim = useRef(new Animated.Value(80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -55,10 +59,11 @@ export default function JoinGame() {
   }, []);
 
   const handleBack = () => {
-    // Only close socket if we haven't joined yet or send a leave message
+    // Notify host if we've joined and haven't started the game yet
     if (joined) {
-      sendMsg({ type: "leave" });
+      sendMessage({ type: "abandon" }).catch(console.error);
     }
+    disconnect();
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: 80,
@@ -70,34 +75,41 @@ export default function JoinGame() {
         duration: 220,
         useNativeDriver: true,
       }),
-    ]).start(() => navigation.goBack());
+    ]).start(() => navigation.navigate("Home" as never));
   };
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     setError(null);
-    sendMsg({ type: "join", code, username });
-    const remove = addListener((msg) => {
+    setJoining(true);
+    
+    try {
+      await sendMessage({ type: "join", code, username });
+    } catch (error) {
+      setError("Failed to connect to host. Check your network and server settings.");
+      setJoining(false);
+      return;
+    }
+
+    const remove = addMessageListener((msg) => {
       console.log("[JoinGame] Received message:", msg);
       if (msg.type === "joined") {
+        setJoining(false);
         const receivedMode = msg.mode || "Rapid";
         const receivedTime = msg.time || "10 min";
         const receivedHostUsername = msg.hostUsername;
         const receivedVariant = msg.variant || "standard";
-        const receivedChess960Fen = msg.chess960Fen || null;
         
         // Update state for display
         setHostUsername(receivedHostUsername);
         setMode(receivedMode);
         setTime(receivedTime);
         setVariant(receivedVariant);
-        setChess960Fen(receivedChess960Fen);
         
         // Update refs for use in game_start
         modeRef.current = receivedMode;
         timeRef.current = receivedTime;
         hostUsernameRef.current = receivedHostUsername;
         variantRef.current = receivedVariant;
-        chess960FenRef.current = receivedChess960Fen;
         
         setJoined(true);
       } else if (msg.type === "color_update") {
@@ -114,17 +126,35 @@ export default function JoinGame() {
           opponentUsername: hostUsernameRef.current,
           myColor: guestColor,
           variant: variantRef.current,
-          chess960Fen: msg.chess960Fen || chess960FenRef.current,
+          isHost: false,
         });
       } else if (msg.type === "error") {
         remove();
-        setError(msg.message);
-      } else if (msg.type === "room_cancelled") {
+        setJoining(false);
+        setError(msg.message || "Room not found");
+      } else if (msg.type === "room_cancelled" || msg.type === "room_closed") {
         remove();
+        setJoining(false);
         setJoined(false);
-        setError("The host cancelled the room.");
+        // Navigate to home when room is closed by host
+        navigation.navigate("Home" as never);
       }
     });
+    
+    // Add timeout for server response
+    const timeout = setTimeout(() => {
+      if (!joined) {
+        remove();
+        setJoining(false);
+        setError("Server timeout. Please try again.");
+      }
+    }, 10000); // 10 second timeout
+
+    // Cleanup timeout when component unmounts or successful join
+    return () => {
+      clearTimeout(timeout);
+      remove();
+    };
   };
 
   return (
@@ -134,20 +164,21 @@ export default function JoinGame() {
       </Pressable>
 
       <View style={styles.top}>
-        <Text style={styles.label}>Joining · {mode}</Text>
-        <Text style={styles.title}>{joined && hostUsername ? `${hostUsername}'s Room` : "Join Room"}</Text>
-        <View style={styles.badgeRow}>
-          {variant === 'chess960' && (
-            <View style={styles.variantBadge}>
-              <MaterialIcons name="shuffle" size={14} color="#7b5a3a" />
-              <Text style={styles.variantText}>Chess960</Text>
-            </View>
-          )}
-          <View style={styles.timeBadge}>
-            <MaterialIcons name="timer" size={14} color="#69923e" />
-            <Text style={styles.timeText}>{time} per side</Text>
-          </View>
-        </View>
+        <Text style={styles.label}>Join Game</Text>
+        <Text style={styles.title}>{joined && hostUsername ? `${hostUsername}'s Room` : "Enter Room Code"}</Text>
+        {joined && (
+          <>
+            <Text style={styles.modeText}>
+              {mode} · {time} per side
+            </Text>
+            {variant === 'chess960' && (
+              <View style={styles.variantBadge}>
+                <MaterialIcons name="shuffle" size={14} color="#7b5a3a" />
+                <Text style={styles.variantText}>Chess960</Text>
+              </View>
+            )}
+          </>
+        )}
       </View>
 
       <Animated.View
@@ -222,8 +253,10 @@ export default function JoinGame() {
           <>
             <Text style={styles.panelTitle}>Enter room code</Text>
             <Text style={styles.panelSub}>
-              Ask your opponent for their 4-character code
+              Ask the host for their 4-character code.{'\n'}
+              Game settings will match the host's room.
             </Text>
+
             <TextInput
               style={styles.input}
               value={code}
@@ -233,20 +266,41 @@ export default function JoinGame() {
               autoCapitalize="characters"
               maxLength={4}
             />
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {error && (
+              <View style={styles.errorBox}>
+                <MaterialIcons name="error-outline" size={20} color="#ff6b6b" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
             <Pressable
               style={({ pressed }) => [
                 styles.joinBtn,
-                { opacity: pressed || code.length < 4 ? 0.6 : 1 },
+                { opacity: pressed || code.length < 4 || joining ? 0.6 : 1 },
               ]}
-              disabled={code.length < 4}
+              disabled={code.length < 4 || joining}
               onPress={handleJoin}
             >
-              <Text style={styles.joinBtnText}>Join Game</Text>
+              {joining ? (
+                <>
+                  <ActivityIndicator color="#69923e" size="small" />
+                  <Text style={styles.joinBtnText}>Joining...</Text>
+                </>
+              ) : (
+                <Text style={styles.joinBtnText}>Join Game</Text>
+              )}
             </Pressable>
           </>
         )}
       </Animated.View>
+      
+      {/* IP Configuration Reminder */}
+      {!joined && (
+        <View style={styles.reminderContainer}>
+          <IPConfigReminder variant="guest" />
+        </View>
+      )}
+      
+      <ChessLANFooter />
     </SafeAreaView>
   );
 }
@@ -280,6 +334,12 @@ const styles = StyleSheet.create({
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 40,
     color: "#2c2b29",
+  },
+  modeText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 15,
+    color: "#69923e",
+    marginTop: 4,
   },
   badgeRow: {
     flexDirection: "row",
@@ -321,7 +381,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     padding: 28,
     paddingBottom: 48,
-    gap: 6,
+    gap: 4,
   },
   panelTitle: {
     fontFamily: "GoogleSansFlex_700Bold",
@@ -361,16 +421,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#69923e",
   },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,107,107,0.15)",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,107,107,0.3)",
+  },
   errorText: {
     fontFamily: "GoogleSansFlex_500Medium",
     fontSize: 13,
-    color: "#ffcccc",
-    textAlign: "center",
+    color: "#ff6b6b",
   },
   playerBox: {
     borderRadius: 18,
-    paddingVertical: 22,
-    paddingHorizontal: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     alignItems: "center",
   },
   playerBoxLight: { backgroundColor: "white" },
@@ -382,14 +453,14 @@ const styles = StyleSheet.create({
   },
   playerRoleLight: { color: "rgba(26,26,26,0.5)" },
   playerRoleDark: { color: "rgba(255,255,255,0.5)" },
-  playerName: { fontFamily: "GoogleSansFlex_700Bold", fontSize: 20 },
+  playerName: { fontFamily: "GoogleSansFlex_700Bold", fontSize: 18 },
   playerNameLight: { color: "#1a1a1a" },
   playerNameDark: { color: "white" },
   vsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   vsText: {
     fontFamily: "GoogleSansFlex_700Bold",
@@ -400,7 +471,7 @@ const styles = StyleSheet.create({
     marginTop: "auto",
     backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: 18,
-    padding: 24,
+    padding: 20,
     alignItems: "center",
     gap: 8,
   },
@@ -413,7 +484,7 @@ const styles = StyleSheet.create({
   },
   codeText: {
     fontFamily: "ArchivoBlack_400Regular",
-    fontSize: 38,
+    fontSize: 34,
     color: "white",
     letterSpacing: 8,
   },
@@ -427,5 +498,10 @@ const styles = StyleSheet.create({
     fontFamily: "GoogleSansFlex_400Regular",
     fontSize: 13,
     color: "rgba(255,255,255,0.7)",
+  },
+  reminderContainer: {
+    paddingHorizontal: 20,
+    backgroundColor: "#69923e",
+    paddingBottom: 12,
   },
 });

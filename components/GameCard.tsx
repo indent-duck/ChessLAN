@@ -3,11 +3,8 @@ import {
   Text,
   StyleSheet,
   useWindowDimensions,
-  Pressable,
 } from "react-native";
 import { ComponentType } from "react";
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 interface GameCardProps {
   icon: ComponentType<{ width: number; height: number }>;
@@ -16,10 +13,9 @@ interface GameCardProps {
   username: string;
 }
 
-export default function GameMode({ icon: Icon, title, time, username }: GameCardProps) {
+export default function GameMode({ icon: Icon, title, time }: GameCardProps) {
   const { width } = useWindowDimensions();
   const iconSize = width * 0.25;
-  const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
   return (
     <View style={styles.container}>
@@ -32,15 +28,6 @@ export default function GameMode({ icon: Icon, title, time, username }: GameCard
       <View style={styles.iconContainer}>
         <Icon width={iconSize} height={iconSize} />
       </View>
-      <Pressable
-        onPress={() => navigation.navigate("SelectMode", { mode: title, time, username })}
-        style={({ pressed }) => [
-          styles.playButton,
-          { opacity: pressed ? 0.7 : 1 },
-        ]}
-      >
-        <Text style={styles.playButtonText}>Play Now</Text>
-      </Pressable>
     </View>
   );
 }
@@ -81,18 +68,5 @@ const styles = StyleSheet.create({
   iconContainer: {
     alignItems: "center",
     paddingVertical: 16,
-  },
-  playButton: {
-    backgroundColor: "#69923e",
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  playButtonText: {
-    color: "white",
-    fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 16,
-    letterSpacing: 0.3,
   },
 });

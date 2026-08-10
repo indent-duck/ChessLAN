@@ -13,7 +13,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRef, useState, useCallback, useEffect } from "react";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialIcons } from "@expo/vector-icons";
 import Rook from "../assets/svg/rookProfile.svg";
@@ -23,6 +24,7 @@ import King from "../assets/svg/king.svg";
 import Queen from "../assets/svg/queen.svg";
 import Chessboard from "../assets/svg/chessboard.svg";
 import { getServerUrl, setServerUrl } from "../config";
+import ChessLANFooter from "../components/ChessLANFooter";
 
 const CARD_WIDTH = 260;
 const CARD_GAP = 16;
@@ -35,6 +37,7 @@ const gameModes = [
 ];
 
 export default function Home() {
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { width } = useWindowDimensions();
   const iconSize = width * 0.11;
   const snapInterval = CARD_WIDTH + CARD_GAP;
@@ -196,53 +199,100 @@ export default function Home() {
             {gameModes[activeIndex].time} per side
           </Text>
         </View>
-        <View style={{ overflow: "visible" }}>
-          <FlatList
-            data={gameModes}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={snapInterval}
-            decelerationRate="fast"
-            contentContainerStyle={{
-              paddingHorizontal: (width - CARD_WIDTH) / 2,
-              paddingVertical: 12,
-              gap: CARD_GAP,
-            }}
-            renderItem={({ item, index }) => (
-              <Animated.View
-                style={{
-                  transform: [{ scale: scaleAnims[index] }],
-                  opacity: opacityAnims[index],
-                }}
-              >
-                <Card
-                  icon={item.icon}
-                  title={item.title}
-                  time={item.time}
-                  username={username}
+        
+        {/* Carousel and Host Button grouped together */}
+        <View style={styles.carouselHostGroup}>
+          <View style={{ overflow: "visible" }}>
+            <FlatList
+              data={gameModes}
+              keyExtractor={(item) => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={snapInterval}
+              decelerationRate="fast"
+              contentContainerStyle={{
+                paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_GAP / 2,
+                paddingVertical: 12,
+                gap: CARD_GAP,
+              }}
+              renderItem={({ item, index }) => (
+                <Animated.View
+                  style={{
+                    transform: [{ scale: scaleAnims[index] }],
+                    opacity: opacityAnims[index],
+                  }}
+                >
+                  <Card
+                    icon={item.icon}
+                    title={item.title}
+                    time={item.time}
+                    username={username}
+                  />
+                </Animated.View>
+              )}
+              onViewableItemsChanged={onViewableItemsChanged}
+              viewabilityConfig={viewabilityConfig.current}
+            />
+            {/* Dot indicators */}
+            <View style={styles.dots}>
+              {gameModes.map((_, i) => (
+                <View
+                  key={i}
+                  style={[styles.dot, i === activeIndex && styles.dotActive]}
                 />
-              </Animated.View>
-            )}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig.current}
-          />
-          {/* Dot indicators */}
-          <View style={styles.dots}>
-            {gameModes.map((_, i) => (
-              <View
-                key={i}
-                style={[styles.dot, i === activeIndex && styles.dotActive]}
-              />
-            ))}
+              ))}
+            </View>
           </View>
+
+          {/* Host Button inside the group */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.hostBtn,
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
+            onPress={() => {
+              const selectedMode = gameModes[activeIndex];
+              if (selectedMode.id === "custom") {
+                // For custom, go to CustomTime screen for configuration
+                navigation.navigate("CustomTime", { username });
+              } else {
+                // For standard modes, go directly to HostGame with standard variant
+                navigation.navigate("HostGame", { 
+                  mode: selectedMode.title, 
+                  time: selectedMode.time, 
+                  username,
+                  variant: "standard"
+                });
+              }
+            }}
+          >
+            <View style={styles.actionBtnContent}>
+              <MaterialIcons name="wifi-tethering" size={20} color="white" />
+              <Text style={styles.hostBtnText}>
+                Host {gameModes[activeIndex].title} Game
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={20} color="rgba(255,255,255,0.8)" />
+          </Pressable>
         </View>
+
+        {/* Join Button - separate from carousel */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.joinBtn,
+            { opacity: pressed ? 0.85 : 1 },
+          ]}
+          onPress={() => navigation.navigate("JoinGame", { username })}
+        >
+          <View style={styles.actionBtnContent}>
+            <MaterialIcons name="login" size={20} color="#69923e" />
+            <Text style={styles.joinBtnText}>Join with Room Code</Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={20} color="#69923e" />
+        </Pressable>
       </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>ChessLAN v1.0.0</Text>
-      </View>
+      <ChessLANFooter />
 
       {/* Settings Modal */}
       <Modal visible={settingsVisible} transparent animationType="slide">
@@ -460,17 +510,6 @@ const styles = StyleSheet.create({
     width: 20,
     backgroundColor: "white",
   },
-  footer: {
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingBottom: 28,
-    backgroundColor: "#69923e",
-  },
-  footerText: {
-    fontFamily: "GoogleSansFlex_400Regular",
-    fontSize: 12,
-    color: "rgba(255,255,255,0.4)",
-  },
   settingsBtn: {
     width: 40,
     height: 40,
@@ -681,5 +720,49 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 4,
+  },
+  carouselHostGroup: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+    marginHorizontal: 12,
+    marginBottom: 12,
+  },
+  hostBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginTop: 8,
+  },
+  joinBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "white",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginHorizontal: 20,
+  },
+  actionBtnContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  hostBtnText: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 15,
+    color: "white",
+  },
+  joinBtnText: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 15,
+    color: "#69923e",
   },
 });

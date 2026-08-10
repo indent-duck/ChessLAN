@@ -1,14 +1,16 @@
 import { View, Text, StyleSheet, Pressable, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import ChessLANFooter from "../components/ChessLANFooter";
 
 export default function SelectMode() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const route = useRoute<any>();
   const { mode, time, username } = route.params ?? { mode: "Rapid", time: "10 min", username: "" };
+  const [variant, setVariant] = useState<"standard" | "chess960">("standard");
 
   const slideAnim = useRef(new Animated.Value(80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -48,30 +50,72 @@ export default function SelectMode() {
       <Animated.View
         style={[styles.panel, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
       >
-        <Text style={styles.panelTitle}>How do you want to play?</Text>
+        <Text style={styles.panelTitle}>Configure your game</Text>
+        <Text style={styles.panelSubtitle}>
+          Choose variant and start hosting
+        </Text>
+
+        {/* Variant Selection */}
+        <View style={styles.variantSection}>
+          <Text style={styles.variantLabel}>Game Variant</Text>
+          <View style={styles.variantButtons}>
+            <Pressable
+              style={[
+                styles.variantBtn,
+                variant === "standard" && styles.variantBtnActive,
+              ]}
+              onPress={() => setVariant("standard")}
+            >
+              <MaterialIcons 
+                name="extension" 
+                size={20} 
+                color={variant === "standard" ? "#69923e" : "rgba(255,255,255,0.7)"} 
+              />
+              <Text
+                style={[
+                  styles.variantBtnText,
+                  variant === "standard" && styles.variantBtnTextActive,
+                ]}
+              >
+                Standard
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.variantBtn,
+                variant === "chess960" && styles.variantBtnActive,
+              ]}
+              onPress={() => setVariant("chess960")}
+            >
+              <MaterialIcons 
+                name="shuffle" 
+                size={20} 
+                color={variant === "chess960" ? "#69923e" : "rgba(255,255,255,0.7)"} 
+              />
+              <Text
+                style={[
+                  styles.variantBtnText,
+                  variant === "chess960" && styles.variantBtnTextActive,
+                ]}
+              >
+                Chess960
+              </Text>
+            </Pressable>
+          </View>
+          {variant === "chess960" && (
+            <Text style={styles.variantDescription}>
+              Fischer Random Chess: pieces on the back rank are randomized
+            </Text>
+          )}
+        </View>
 
         <Pressable
-          style={({ pressed }) => [styles.optionBtn, styles.hostBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => navigation.navigate(mode === "Custom" ? "CustomTime" : "HostGame", { mode, time, username })}
+          style={({ pressed }) => [styles.hostGameBtn, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => navigation.navigate(mode === "Custom" ? "CustomTime" : "HostGame", { mode, time, username, variant })}
         >
-          <MaterialIcons name="wifi-tethering" size={28} color="white" />
-          <View style={styles.optionText}>
-            <Text style={styles.optionTitle}>Host Game</Text>
-            <Text style={styles.optionSub}>Create a room and invite a friend</Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={22} color="rgba(255,255,255,0.6)" />
-        </Pressable>
-
-        <Pressable
-          style={({ pressed }) => [styles.optionBtn, styles.joinBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => navigation.navigate("JoinGame", { username })}
-        >
-          <MaterialIcons name="login" size={28} color="#69923e" />
-          <View style={styles.optionText}>
-            <Text style={[styles.optionTitle, { color: "#69923e" }]}>Join Game</Text>
-            <Text style={[styles.optionSub, { color: "#555" }]}>Enter a room code to join</Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={22} color="#aaa" />
+          <MaterialIcons name="wifi-tethering" size={24} color="#69923e" />
+          <Text style={styles.hostGameBtnText}>Start Hosting</Text>
+          <MaterialIcons name="chevron-right" size={22} color="#69923e" />
         </Pressable>
 
         <View style={styles.infoBox}>
@@ -79,12 +123,15 @@ export default function SelectMode() {
           <View style={styles.infoTextContainer}>
             <Text style={styles.infoTitle}>Before you start:</Text>
             <Text style={styles.infoText}>
-              • Host: Configure server IP in Home → Settings{'\n'}
-              • Guest: Get host's IP and update in Settings
+              • Configure server IP in Home → Settings{'\n'}
+              • Share the room code with your opponent{'\n'}
+              • Your opponent will match these settings
             </Text>
           </View>
         </View>
       </Animated.View>
+      
+      <ChessLANFooter />
     </SafeAreaView>
   );
 }
@@ -149,26 +196,71 @@ const styles = StyleSheet.create({
     color: "white",
     marginBottom: 6,
   },
-  optionBtn: {
+  panelSubtitle: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  variantSection: {
+    marginBottom: 20,
+  },
+  variantLabel: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.9)",
+    marginBottom: 10,
+  },
+  variantButtons: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  variantBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 18,
-    padding: 18,
-    gap: 14,
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "transparent",
   },
-  hostBtn: { backgroundColor: "rgba(255,255,255,0.15)" },
-  joinBtn: { backgroundColor: "white" },
-  optionText: { flex: 1 },
-  optionTitle: {
+  variantBtnActive: {
+    backgroundColor: "white",
+    borderColor: "white",
+  },
+  variantBtnText: {
     fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 16,
-    color: "white",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
   },
-  optionSub: {
+  variantBtnTextActive: {
+    color: "#69923e",
+  },
+  variantDescription: {
     fontFamily: "GoogleSansFlex_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.6)",
-    marginTop: 2,
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  hostGameBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: "white",
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  hostGameBtnText: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 16,
+    color: "#69923e",
   },
   infoBox: {
     flexDirection: "row",

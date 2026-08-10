@@ -13,7 +13,13 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "ChessLAN needs local network access to connect with other players on your WiFi network.",
+        "NSBonjourServices": [
+          "_chesslan._tcp"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,13 +29,23 @@
       "package": "com.leeramirez.chesslan",
       "usesCleartextTraffic": true,
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "ACCESS_WIFI_STATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ffec39fc-bb7c-43f7-8367-71981934626b"
+      }
+    }
   }
 }

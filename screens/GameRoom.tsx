@@ -15,7 +15,8 @@ import { ComponentType, useState, useEffect, useRef, useCallback } from "react";
 import { SvgProps } from "react-native-svg";
 import { Chess, Square } from "chess.js";
 import Trophy from "../assets/svg/trophy.svg";
-import { addListener, sendMsg } from "../hooks/useSocket";
+import { useLocalServer } from "../hooks/useLocalServer";
+import { useLocalClient } from "../hooks/useLocalClient";
 
 // Generate a valid Chess960 starting position
 function generateChess960Position(): string {
@@ -115,9 +116,35 @@ const PIECES: Record<string, PieceComponent> = {
 export default function GameRoom() {
   const navigation = useNavigation();
   const route = useRoute<any>();
-  const { mode, time, username, flipped, myColor, opponentUsername, variant = 'standard', chess960Fen } = route.params ?? {};
+  const { mode, time, username, flipped, myColor, opponentUsername, variant = 'standard', chess960Fen, isHost } = route.params ?? {};
   // myColor is "w" or "b" for multiplayer; undefined means local 2-player
+  // isHost is true if this phone is hosting, false if guest, undefined for local
   const increment = parseIncrement(time ?? "");
+
+  // Initialize networking based on role
+  const localServer = useLocalServer();
+  const localClient = useLocalClient();
+  
+  const sendNetworkMessage = useCallback((msg: any) => {
+    if (isHost === true) {
+      // Host sends to guest via server
+      localServer.sendMessage(msg);
+    } else if (isHost === false) {
+      // Guest sends to host via client
+      localClient.sendMessage(msg).catch(console.error);
+    }
+  }, [isHost, localServer, localClient]);
+
+  const addNetworkListener = useCallback((handler: (msg: any) => void) => {
+    if (isHost === true) {
+      // Host receives from guest via server listener
+      return localServer.addMoveListener(handler);
+    } else if (isHost === false) {
+      // Guest receives from host via client
+      return localClient.addMessageListener(handler);
+    }
+    return () => {};
+  }, [isHost, localServer, localClient]);
 
   // Initialize chess instance with appropriate starting position
   const initializeChess = () => {
@@ -202,10 +229,13 @@ export default function GameRoom() {
   // Incoming moves from opponent
   useEffect(() => {
     if (!myColor) return;
-    const remove = addListener((msg: any) => {
+    const remove = addNetworkListener((msg: any) => {
       if (msg.type === "move") {
-        commitMove(msg.move.from, msg.move.to, msg.move.promotion ?? "q", false);
-      } else if (msg.type === "opponent_disconnected") {
+        commitMove(msg.move.from, msg.move.to, msg.move.promotion, false);
+        // Sync clocks if times are provided
+        if (msg.whiteTime !== undefined) setWhiteTime(msg.whiteTime);
+        if (msg.blackTime !== undefined) setBlackTime(msg.blackTime);
+      } else if (msg.type === "opponent_disconnected" || msg.type === "room_closed") {
         setGameOver({ winner: username ?? "You", reason: "opponent disconnected" });
       } else if (msg.type === "resign") {
         setGameOver({ winner: username ?? "You", reason: "opponent resigned" });
@@ -222,11 +252,27 @@ export default function GameRoom() {
       }
     });
     return remove;
-  }, [myColor, startDrawTimer, clearDrawOffer]);
+  }, [myColor, startDrawTimer, clearDrawOffer, addNetworkListener]);
 
-  const commitMove = useCallback((from: Square, to: Square, promotion: "q" | "r" | "b" | "n", local = true) => {
+  // Cleanup on unmount - ensure connections are closed properly
+  useEffect(() => {
+    return () => {
+      if (myColor && isHost === true) {
+        // Host should stop server when leaving the game room
+        localServer.stopServer();
+      } else if (myColor && isHost === false) {
+        // Guest should disconnect
+        localClient.disconnect();
+      }
+    };
+  }, [myColor, isHost]);
+
+  const commitMove = useCallback((from: Square, to: Square, promotion?: "q" | "r" | "b" | "n", local = true) => {
     const chess = chessRef.current;
-    chess.move({ from, to, promotion });
+    // Only include promotion if it's actually a promotion move
+    const moveObj: any = { from, to };
+    if (promotion) moveObj.promotion = promotion;
+    chess.move(moveObj);
     setBoard(chess.board());
     setMoves(chess.history());
     setLastMove({ from, to });
@@ -242,16 +288,21 @@ export default function GameRoom() {
         const winnerIsPlayer = flipped ? turn === "b" : turn === "w";
         const winner = winnerIsPlayer ? username ?? "You" : opponentName;
         setGameOver({ winner, reason: "by checkmate" });
-        if (myColor) sendMsg({ type: "game_over", winner, reason: "by checkmate" });
+        if (myColor) sendNetworkMessage({ type: "game_over", winner, reason: "by checkmate" });
       } else if (chess.isDraw()) {
         setGameOver({ winner: "Draw", reason: "stalemate" });
-        if (myColor) sendMsg({ type: "game_over", winner: "Draw", reason: "stalemate" });
+        if (myColor) sendNetworkMessage({ type: "game_over", winner: "Draw", reason: "stalemate" });
       }
     }
-    if (local && myColor) sendMsg({ type: "move", move: { from, to, promotion } });
+    // Only send promotion in network message if it's defined
+    if (local && myColor) {
+      const networkMove: any = { from, to };
+      if (promotion) networkMove.promotion = promotion;
+      sendNetworkMessage({ type: "move", move: networkMove, whiteTime, blackTime });
+    }
     setSelected(null);
     setLegalSquares([]);
-  }, [turn, increment, flipped, username, myColor, opponentName]);
+  }, [turn, increment, flipped, username, myColor, opponentName, sendNetworkMessage, whiteTime, blackTime]);
 
   const handleSquarePress = useCallback((row: number, col: number) => {
     if (gameOver || pendingPromotion) return;
@@ -270,7 +321,7 @@ export default function GameRoom() {
           setSelected(null);
           setLegalSquares([]);
         } else {
-          commitMove(selected, sq, "q");
+          commitMove(selected, sq);
         }
       } else if (piece && piece.color === turn) {
         setSelected(sq);
@@ -301,24 +352,24 @@ export default function GameRoom() {
   const handleResignConfirm = () => {
     setResignConfirm(false);
     setGameOver({ winner: opponentName, reason: "by resignation" });
-    if (myColor) sendMsg({ type: "resign" });
+    if (myColor) sendNetworkMessage({ type: "resign" });
   };
 
   const handleDrawOffer = () => {
     if (drawOffer === "sent" || !myColor) return;
-    sendMsg({ type: "draw_offer" });
+    sendNetworkMessage({ type: "draw_offer" });
     setDrawOffer("sent");
     startDrawTimer();
   };
 
   const handleDrawAccept = () => {
-    sendMsg({ type: "draw_accept" });
+    sendNetworkMessage({ type: "draw_accept" });
     clearDrawOffer();
     setGameOver({ winner: "Draw", reason: "by agreement" });
   };
 
   const handleDrawDecline = () => {
-    sendMsg({ type: "draw_decline" });
+    sendNetworkMessage({ type: "draw_decline" });
     clearDrawOffer();
   };
 
@@ -333,7 +384,7 @@ export default function GameRoom() {
   const handleAbandonConfirm = () => {
     setAbandonConfirm(false);
     if (myColor) {
-      sendMsg({ type: "abandon" });
+      sendNetworkMessage({ type: "abandon" });
     }
     navigation.navigate("Home" as never);
   };
