@@ -9,7 +9,9 @@ import {
   Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialIcons } from "@expo/vector-icons";
 import Rook from "../assets/svg/rookProfile.svg";
 import Rapid from "../assets/svg/rapid.svg";
@@ -41,6 +43,10 @@ export default function Home() {
   ).current;
   const [username, setUsername] = useState("username");
   const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem("username").then((val) => { if (val) setUsername(val); });
+  }, []);
   const inputRef = useRef<TextInput>(null);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 });
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
@@ -64,6 +70,12 @@ export default function Home() {
     }
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      setEditing(false);
+    }, [])
+  );
+
   const startEditing = () => {
     setEditing(true);
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -85,20 +97,20 @@ export default function Home() {
                   style={styles.usernameInput}
                   value={username}
                   onChangeText={setUsername}
-                  onSubmitEditing={() => setEditing(false)}
+                  onSubmitEditing={() => { AsyncStorage.setItem("username", username); setEditing(false); }}
                   returnKeyType="done"
                 />
               ) : (
                 <Text style={styles.username}>{username}</Text>
               )}
               <Pressable
-                onPress={editing ? () => setEditing(false) : startEditing}
+                onPress={editing ? () => { AsyncStorage.setItem("username", username); setEditing(false); } : startEditing}
                 hitSlop={8}
               >
                 <MaterialIcons
                   name={editing ? "check" : "edit"}
                   size={16}
-                  color={editing ? "#1e6b40" : "#777"}
+                  color={editing ? "#69923e" : "#777"}
                 />
               </Pressable>
             </View>
@@ -169,7 +181,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#f5f5f0",
+    backgroundColor: "#ffffff",
   },
   container: {
     flex: 1,
@@ -185,7 +197,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#e0f0e8",
+    backgroundColor: "#ddeacc",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -200,14 +212,14 @@ const styles = StyleSheet.create({
   username: {
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 16,
-    color: "#1a1a1a",
+    color: "#2c2b29",
   },
   usernameInput: {
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 16,
-    color: "#1a1a1a",
+    color: "#2c2b29",
     borderBottomWidth: 1.5,
-    borderBottomColor: "#1e6b40",
+    borderBottomColor: "#69923e",
     paddingVertical: 0,
     minWidth: 80,
   },
@@ -218,7 +230,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 28,
-    color: "#1a1a1a",
+    color: "#2c2b29",
   },
   heroSubtitle: {
     fontFamily: "GoogleSansFlex_400Regular",
@@ -227,7 +239,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   startGameContainer: {
-    backgroundColor: "#1e6b40",
+    backgroundColor: "#69923e",
     marginTop: "auto",
     paddingTop: 20,
     paddingBottom: 24,
@@ -272,7 +284,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     paddingBottom: 28,
-    backgroundColor: "#1e6b40",
+    backgroundColor: "#69923e",
   },
   footerText: {
     fontFamily: "GoogleSansFlex_400Regular",

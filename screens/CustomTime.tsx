@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Pressable, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -10,6 +10,8 @@ const INCREMENT_OPTIONS = [0, 1, 2, 3, 5, 10, 15, 30];
 
 export default function CustomTime() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const route = useRoute<any>();
+  const { username } = route.params ?? { username: "" };
   const [minutes, setMinutes] = useState(5);
   const [increment, setIncrement] = useState(0);
 
@@ -32,7 +34,7 @@ export default function CustomTime() {
 
   const handlePlay = () => {
     const time = increment > 0 ? `${minutes}+${increment}` : `${minutes} min`;
-    navigation.navigate("SelectMode", { mode: "Custom", time });
+    navigation.navigate("HostGame", { mode: "Custom", time, username });
   };
 
   return (
@@ -45,7 +47,7 @@ export default function CustomTime() {
         <Text style={styles.label}>Game Mode</Text>
         <Text style={styles.title}>Custom</Text>
         <View style={styles.previewBadge}>
-          <MaterialIcons name="timer" size={14} color="#1e6b40" />
+          <MaterialIcons name="timer" size={14} color="#69923e" />
           <Text style={styles.previewText}>
             {minutes} min{increment > 0 ? ` + ${increment}s` : ""}
           </Text>
@@ -96,14 +98,14 @@ export default function CustomTime() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f5f0" },
+  safe: { flex: 1, backgroundColor: "#ffffff" },
   backBtn: {
     marginLeft: 20,
     marginTop: 8,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#e8e8e3",
+    backgroundColor: "#ebebeb",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -123,13 +125,13 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 40,
-    color: "#1a1a1a",
+    color: "#2c2b29",
   },
   previewBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#e0f0e8",
+    backgroundColor: "#ddeacc",
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,
@@ -137,11 +139,11 @@ const styles = StyleSheet.create({
   previewText: {
     fontFamily: "GoogleSansFlex_500Medium",
     fontSize: 13,
-    color: "#1e6b40",
+    color: "#69923e",
   },
   panel: {
     flex: 1,
-    backgroundColor: "#1e6b40",
+    backgroundColor: "#69923e",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 28,
@@ -174,7 +176,7 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
   },
   chipTextActive: {
-    color: "#1e6b40",
+    color: "#69923e",
   },
   playBtn: {
     backgroundColor: "white",
@@ -190,6 +192,6 @@ const styles = StyleSheet.create({
   playBtnText: {
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 16,
-    color: "#1e6b40",
+    color: "#69923e",
   },
 });

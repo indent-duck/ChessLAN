@@ -1,30 +1,102 @@
-import { View, Text, StyleSheet, Pressable, Animated, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Animated,
+  TextInput,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useEffect, useRef, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
+import { sendMsg, addListener } from "../hooks/useSocket";
 
 export default function JoinGame() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const route = useRoute<any>();
-  const { mode, time } = route.params ?? { mode: "Rapid", time: "10 min" };
+  const { mode, time, username } = route.params ?? {
+    mode: "Rapid",
+    time: "10 min",
+    username: "",
+  };
   const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [joined, setJoined] = useState(false);
+  const [hostUsername, setHostUsername] = useState<string | null>(null);
+  const [flipped, setFlipped] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 200 }),
-      Animated.timing(fadeAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 18,
+        stiffness: 200,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 280,
+        useNativeDriver: true,
+      }),
     ]).start();
   }, []);
 
   const handleBack = () => {
+    // Only close socket if we haven't joined yet or send a leave message
+    if (joined) {
+      sendMsg({ type: "leave" });
+    }
     Animated.parallel([
-      Animated.timing(slideAnim, { toValue: 80, duration: 260, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+      Animated.timing(slideAnim, {
+        toValue: 80,
+        duration: 260,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
     ]).start(() => navigation.goBack());
+  };
+
+  const handleJoin = () => {
+    setError(null);
+    sendMsg({ type: "join", code, username });
+    const remove = addListener((msg) => {
+      console.log("[JoinGame] Received message:", msg);
+      if (msg.type === "joined") {
+        setHostUsername(msg.hostUsername);
+        setJoined(true);
+      } else if (msg.type === "color_update") {
+        console.log("[JoinGame] Setting flipped to:", msg.flipped);
+        setFlipped(msg.flipped);
+      } else if (msg.type === "game_start") {
+        remove();
+        const guestColor = msg.flipped ? "w" : "b";
+        navigation.navigate("GameRoom", {
+          mode,
+          time,
+          username,
+          flipped: !msg.flipped,
+          opponentUsername: hostUsername,
+          myColor: guestColor,
+        });
+      } else if (msg.type === "error") {
+        remove();
+        setError(msg.message);
+      } else if (msg.type === "room_cancelled") {
+        remove();
+        setJoined(false);
+        setError("The host cancelled the room.");
+      }
+    });
   };
 
   return (
@@ -35,49 +107,123 @@ export default function JoinGame() {
 
       <View style={styles.top}>
         <Text style={styles.label}>Joining · {mode}</Text>
-        <Text style={styles.title}>Join Room</Text>
+        <Text style={styles.title}>{joined && hostUsername ? `${hostUsername}'s Room` : "Join Room"}</Text>
         <View style={styles.timeBadge}>
-          <MaterialIcons name="timer" size={14} color="#1e6b40" />
+          <MaterialIcons name="timer" size={14} color="#69923e" />
           <Text style={styles.timeText}>{time} per side</Text>
         </View>
       </View>
 
-      <Animated.View style={[styles.panel, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-        <Text style={styles.panelTitle}>Enter room code</Text>
-        <Text style={styles.panelSub}>Ask your opponent for their 6-character code</Text>
-
-        <TextInput
-          style={styles.input}
-          value={code}
-          onChangeText={(v) => setCode(v.toUpperCase().slice(0, 6))}
-          placeholder="A1B2C3"
-          placeholderTextColor="rgba(255,255,255,0.3)"
-          autoCapitalize="characters"
-          maxLength={6}
-        />
-
-        <Pressable
-          style={({ pressed }) => [styles.joinBtn, { opacity: pressed || code.length < 6 ? 0.6 : 1 }]}
-          disabled={code.length < 6}
-          onPress={() => console.log("join", code)}
-        >
-          <Text style={styles.joinBtnText}>Join Game</Text>
-          <MaterialIcons name="arrow-forward" size={20} color="white" />
-        </Pressable>
+      <Animated.View
+        style={[
+          styles.panel,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+        ]}
+      >
+        {joined ? (
+          <>
+            <View
+              style={[
+                styles.playerBox,
+                flipped ? styles.playerBoxDark : styles.playerBoxLight,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.playerRole,
+                  flipped ? styles.playerRoleDark : styles.playerRoleLight,
+                ]}
+              >
+                Playing as {flipped ? "Black" : "White"}
+              </Text>
+              <Text
+                style={[
+                  styles.playerName,
+                  flipped ? styles.playerNameDark : styles.playerNameLight,
+                ]}
+              >
+                {hostUsername}
+              </Text>
+            </View>
+            <View style={styles.vsRow}>
+              <Text style={styles.vsText}>vs.</Text>
+            </View>
+            <View
+              style={[
+                styles.playerBox,
+                flipped ? styles.playerBoxLight : styles.playerBoxDark,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.playerRole,
+                  flipped ? styles.playerRoleLight : styles.playerRoleDark,
+                ]}
+              >
+                Playing as {flipped ? "White" : "Black"}
+              </Text>
+              <Text
+                style={[
+                  styles.playerName,
+                  flipped ? styles.playerNameLight : styles.playerNameDark,
+                ]}
+              >
+                {username}
+              </Text>
+            </View>
+            <View style={styles.codeBox}>
+              <Text style={styles.codeLabel}>Room Code</Text>
+              <Text style={styles.codeText}>{code}</Text>
+              <View style={styles.waitingRow}>
+                <ActivityIndicator color="white" size="small" />
+                <Text style={styles.waitingText}>
+                  Waiting for host to start…
+                </Text>
+              </View>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.panelTitle}>Enter room code</Text>
+            <Text style={styles.panelSub}>
+              Ask your opponent for their 4-character code
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={code}
+              onChangeText={(v) => setCode(v.toUpperCase().slice(0, 4))}
+              placeholder="A1B2"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              autoCapitalize="characters"
+              maxLength={4}
+            />
+            {error && <Text style={styles.errorText}>{error}</Text>}
+            <Pressable
+              style={({ pressed }) => [
+                styles.joinBtn,
+                { opacity: pressed || code.length < 4 ? 0.6 : 1 },
+              ]}
+              disabled={code.length < 4}
+              onPress={handleJoin}
+            >
+              <Text style={styles.joinBtnText}>Join Game</Text>
+            </Pressable>
+          </>
+        )}
       </Animated.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f5f0" },
+  safe: { flex: 1, backgroundColor: "#ffffff" },
   backBtn: {
     marginLeft: 20,
     marginTop: 8,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#e8e8e3",
+    backgroundColor: "#ebebeb",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -97,13 +243,13 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 40,
-    color: "#1a1a1a",
+    color: "#2c2b29",
   },
   timeBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#e0f0e8",
+    backgroundColor: "#ddeacc",
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,
@@ -111,11 +257,11 @@ const styles = StyleSheet.create({
   timeText: {
     fontFamily: "GoogleSansFlex_500Medium",
     fontSize: 13,
-    color: "#1e6b40",
+    color: "#69923e",
   },
   panel: {
     flex: 1,
-    backgroundColor: "#1e6b40",
+    backgroundColor: "#69923e",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 28,
@@ -158,6 +304,73 @@ const styles = StyleSheet.create({
   joinBtnText: {
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 16,
-    color: "#1e6b40",
+    color: "#69923e",
+  },
+  errorText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 13,
+    color: "#ffcccc",
+    textAlign: "center",
+  },
+  playerBox: {
+    borderRadius: 18,
+    paddingVertical: 22,
+    paddingHorizontal: 28,
+    alignItems: "center",
+  },
+  playerBoxLight: { backgroundColor: "white" },
+  playerBoxDark: { backgroundColor: "#4b4847" },
+  playerRole: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  playerRoleLight: { color: "rgba(26,26,26,0.5)" },
+  playerRoleDark: { color: "rgba(255,255,255,0.5)" },
+  playerName: { fontFamily: "GoogleSansFlex_700Bold", fontSize: 20 },
+  playerNameLight: { color: "#1a1a1a" },
+  playerNameDark: { color: "white" },
+  vsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+  },
+  vsText: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 18,
+    color: "rgba(255,255,255,0.7)",
+  },
+  codeBox: {
+    marginTop: "auto",
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 18,
+    padding: 24,
+    alignItems: "center",
+    gap: 8,
+  },
+  codeLabel: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.6)",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  codeText: {
+    fontFamily: "ArchivoBlack_400Regular",
+    fontSize: 38,
+    color: "white",
+    letterSpacing: 8,
+  },
+  waitingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  waitingText: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.7)",
   },
 });

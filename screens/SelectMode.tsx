@@ -39,7 +39,7 @@ export default function SelectMode() {
         <Text style={styles.label}>Game Mode</Text>
         <Text style={styles.modeName}>{mode}</Text>
         <View style={styles.timeBadge}>
-          <MaterialIcons name="timer" size={14} color="#1e6b40" />
+          <MaterialIcons name="timer" size={14} color="#69923e" />
           <Text style={styles.timeText}>{time} per side</Text>
         </View>
       </View>
@@ -52,7 +52,7 @@ export default function SelectMode() {
 
         <Pressable
           style={({ pressed }) => [styles.optionBtn, styles.hostBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => navigation.navigate("HostGame", { mode, time, username })}
+          onPress={() => navigation.navigate(mode === "Custom" ? "CustomTime" : "HostGame", { mode, time, username })}
         >
           <MaterialIcons name="wifi-tethering" size={28} color="white" />
           <View style={styles.optionText}>
@@ -64,11 +64,11 @@ export default function SelectMode() {
 
         <Pressable
           style={({ pressed }) => [styles.optionBtn, styles.joinBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => navigation.navigate("JoinGame", { mode, time })}
+          onPress={() => navigation.navigate("JoinGame", { mode, time, username })}
         >
-          <MaterialIcons name="login" size={28} color="#1e6b40" />
+          <MaterialIcons name="login" size={28} color="#69923e" />
           <View style={styles.optionText}>
-            <Text style={[styles.optionTitle, { color: "#1e6b40" }]}>Join Game</Text>
+            <Text style={[styles.optionTitle, { color: "#69923e" }]}>Join Game</Text>
             <Text style={[styles.optionSub, { color: "#555" }]}>Enter a room code to join</Text>
           </View>
           <MaterialIcons name="chevron-right" size={22} color="#aaa" />
@@ -79,14 +79,14 @@ export default function SelectMode() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f5f0" },
+  safe: { flex: 1, backgroundColor: "#ffffff" },
   backBtn: {
     marginLeft: 20,
     marginTop: 8,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#e8e8e3",
+    backgroundColor: "#ebebeb",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -107,13 +107,13 @@ const styles = StyleSheet.create({
   modeName: {
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 40,
-    color: "#1a1a1a",
+    color: "#2c2b29",
   },
   timeBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#e0f0e8",
+    backgroundColor: "#ddeacc",
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,
@@ -121,11 +121,11 @@ const styles = StyleSheet.create({
   timeText: {
     fontFamily: "GoogleSansFlex_500Medium",
     fontSize: 13,
-    color: "#1e6b40",
+    color: "#69923e",
   },
   panel: {
     flex: 1,
-    backgroundColor: "#1e6b40",
+    backgroundColor: "#69923e",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 28,

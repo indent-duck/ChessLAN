@@ -33,7 +33,7 @@ export default function GameMode({ icon: Icon, title, time, username }: GameCard
         <Icon width={iconSize} height={iconSize} />
       </View>
       <Pressable
-        onPress={() => navigation.navigate(title === "Custom" ? "CustomTime" : "SelectMode", { mode: title, time, username })}
+        onPress={() => navigation.navigate("SelectMode", { mode: title, time, username })}
         style={({ pressed }) => [
           styles.playButton,
           { opacity: pressed ? 0.7 : 1 },
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
   },
   timeBadge: {
-    backgroundColor: "#e0f0e8",
+    backgroundColor: "#ddeacc",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -76,14 +76,14 @@ const styles = StyleSheet.create({
   timeBadgeText: {
     fontFamily: "GoogleSansFlex_500Medium",
     fontSize: 12,
-    color: "#1e6b40",
+    color: "#69923e",
   },
   iconContainer: {
     alignItems: "center",
     paddingVertical: 16,
   },
   playButton: {
-    backgroundColor: "#1e6b40",
+    backgroundColor: "#69923e",
     paddingVertical: 12,
     borderRadius: 14,
     alignItems: "center",
