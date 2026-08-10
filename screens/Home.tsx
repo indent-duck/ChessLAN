@@ -141,7 +141,7 @@ export default function Home() {
                   value={username}
                   onChangeText={setUsername}
                   onSubmitEditing={() => {
-                    AsyncStorage.setItem("username", username);
+                    AsyncStorage.setItem("Player", username);
                     setEditing(false);
                   }}
                   returnKeyType="done"
@@ -153,7 +153,7 @@ export default function Home() {
                 onPress={
                   editing
                     ? () => {
-                        AsyncStorage.setItem("username", username);
+                        AsyncStorage.setItem("Player", username);
                         setEditing(false);
                       }
                     : startEditing
