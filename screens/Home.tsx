@@ -56,7 +56,7 @@ export default function Home() {
   const [tempServerUrl, setTempServerUrl] = useState("");
 
   useEffect(() => {
-    AsyncStorage.getItem("username").then((val) => {
+    AsyncStorage.getItem("Player").then((val) => {
       if (val) setUsername(val);
     });
     getServerUrl().then((url) => {
@@ -199,7 +199,7 @@ export default function Home() {
             {gameModes[activeIndex].time} per side
           </Text>
         </View>
-        
+
         {/* Carousel and Host Button grouped together */}
         <View style={styles.carouselHostGroup}>
           <View style={{ overflow: "visible" }}>
@@ -257,11 +257,11 @@ export default function Home() {
                 navigation.navigate("CustomTime", { username });
               } else {
                 // For standard modes, go directly to HostGame with standard variant
-                navigation.navigate("HostGame", { 
-                  mode: selectedMode.title, 
-                  time: selectedMode.time, 
+                navigation.navigate("HostGame", {
+                  mode: selectedMode.title,
+                  time: selectedMode.time,
                   username,
-                  variant: "standard"
+                  variant: "standard",
                 });
               }
             }}
@@ -272,7 +272,11 @@ export default function Home() {
                 Host {gameModes[activeIndex].title} Game
               </Text>
             </View>
-            <MaterialIcons name="chevron-right" size={20} color="rgba(255,255,255,0.8)" />
+            <MaterialIcons
+              name="chevron-right"
+              size={20}
+              color="rgba(255,255,255,0.8)"
+            />
           </Pressable>
         </View>
 

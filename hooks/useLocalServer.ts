@@ -62,6 +62,7 @@ export function useLocalServer() {
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [guestUsername, setGuestUsername] = useState<string | null>(null);
   const [needsRestart, setNeedsRestart] = useState(false);
+  const [chess960Fen, setChess960Fen] = useState<string | undefined>(undefined);
   const serverRef = useRef<any>(null);
 
   const generateRoomCode = () => {
@@ -227,6 +228,7 @@ export function useLocalServer() {
     setIsRunning(false);
     setRoomCode(null);
     setGuestUsername(null);
+    setChess960Fen(undefined);
     
     console.log('[LocalServer] Server stopped');
   };
@@ -243,6 +245,7 @@ export function useLocalServer() {
     setIsRunning(false);
     setRoomCode(null);
     setGuestUsername(null);
+    setChess960Fen(undefined);
     
     console.log('[LocalServer] Force cleanup completed');
   };
@@ -254,7 +257,7 @@ export function useLocalServer() {
     variant: string;
   }, retryCount = 0) => {
     const code = generateRoomCode();
-    const chess960Fen = params.variant === 'chess960' ? generateChess960Fen() : undefined;
+    const generatedChess960Fen = params.variant === 'chess960' ? generateChess960Fen() : undefined;
 
     currentRoom = {
       code,
@@ -262,9 +265,12 @@ export function useLocalServer() {
       mode: params.mode,
       time: params.time,
       variant: params.variant,
-      chess960Fen,
+      chess960Fen: generatedChess960Fen,
       flipped: false,
     };
+    
+    // Update state with the generated FEN
+    setChess960Fen(generatedChess960Fen);
 
     try {
       const server = TcpSocket.createServer((socket) => {
@@ -428,6 +434,7 @@ export function useLocalServer() {
     roomCode,
     guestUsername,
     needsRestart,
+    chess960Fen,
     startServer,
     stopServer,
     forceCleanup,

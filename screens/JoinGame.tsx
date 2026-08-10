@@ -38,6 +38,7 @@ export default function JoinGame() {
   const timeRef = useRef<string>("10 min");
   const hostUsernameRef = useRef<string | null>(null);
   const variantRef = useRef<string>("standard");
+  const chess960FenRef = useRef<string | undefined>(undefined);
 
   const slideAnim = useRef(new Animated.Value(80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -98,6 +99,7 @@ export default function JoinGame() {
         const receivedTime = msg.time || "10 min";
         const receivedHostUsername = msg.hostUsername;
         const receivedVariant = msg.variant || "standard";
+        const receivedChess960Fen = msg.chess960Fen;
         
         // Update state for display
         setHostUsername(receivedHostUsername);
@@ -110,6 +112,9 @@ export default function JoinGame() {
         timeRef.current = receivedTime;
         hostUsernameRef.current = receivedHostUsername;
         variantRef.current = receivedVariant;
+        chess960FenRef.current = receivedChess960Fen;
+        
+        console.log("[JoinGame] Stored Chess960 FEN:", receivedChess960Fen);
         
         setJoined(true);
       } else if (msg.type === "color_update") {
@@ -118,6 +123,7 @@ export default function JoinGame() {
       } else if (msg.type === "game_start") {
         remove();
         const guestColor = msg.flipped ? "w" : "b";
+        console.log("[JoinGame] Navigating to GameRoom with Chess960 FEN:", chess960FenRef.current);
         navigation.navigate("GameRoom", {
           mode: modeRef.current,
           time: timeRef.current,
@@ -126,6 +132,7 @@ export default function JoinGame() {
           opponentUsername: hostUsernameRef.current,
           myColor: guestColor,
           variant: variantRef.current,
+          chess960Fen: chess960FenRef.current,
           isHost: false,
         });
       } else if (msg.type === "error") {

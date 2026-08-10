@@ -21,7 +21,7 @@ export default function HostGame() {
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const localServer = useLocalServer();
-  const { roomCode, guestUsername: opponentName, needsRestart, startServer, stopServer, forceCleanup, updateColor, startGame: startLocalGame } = localServer;
+  const { roomCode, guestUsername: opponentName, needsRestart, chess960Fen, startServer, stopServer, forceCleanup, updateColor, startGame: startLocalGame } = localServer;
 
   const slideAnim = useRef(new Animated.Value(80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -92,12 +92,14 @@ export default function HostGame() {
 
   const handleStart = () => {
     startLocalGame(flipped);
+    console.log("[HostGame] Navigating to GameRoom with Chess960 FEN:", chess960Fen);
     navigation.navigate("GameRoom", {
       mode,
       time,
       username,
       flipped,
       variant,
+      chess960Fen: chess960Fen,
       opponentUsername: opponentName,
       myColor: flipped ? "b" : "w",
       isHost: true,
