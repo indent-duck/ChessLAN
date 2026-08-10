@@ -22,7 +22,7 @@ export default function HostGame() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    sendMsg({ type: "create", username });
+    sendMsg({ type: "create", username, mode, time });
     const remove = addListener((msg) => {
       if (msg.type === "created") {
         setRoomCode(msg.code);

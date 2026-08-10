@@ -17,16 +17,19 @@ import { sendMsg, addListener } from "../hooks/useSocket";
 export default function JoinGame() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const route = useRoute<any>();
-  const { mode, time, username } = route.params ?? {
-    mode: "Rapid",
-    time: "10 min",
-    username: "",
-  };
+  const { username } = route.params ?? { username: "" };
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
   const [hostUsername, setHostUsername] = useState<string | null>(null);
   const [flipped, setFlipped] = useState(false);
+  const [mode, setMode] = useState<string>("Rapid");
+  const [time, setTime] = useState<string>("10 min");
+
+  // Use refs to track the latest mode and time values for use in the listener
+  const modeRef = useRef<string>("Rapid");
+  const timeRef = useRef<string>("10 min");
+  const hostUsernameRef = useRef<string | null>(null);
 
   const slideAnim = useRef(new Animated.Value(80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -72,7 +75,20 @@ export default function JoinGame() {
     const remove = addListener((msg) => {
       console.log("[JoinGame] Received message:", msg);
       if (msg.type === "joined") {
-        setHostUsername(msg.hostUsername);
+        const receivedMode = msg.mode || "Rapid";
+        const receivedTime = msg.time || "10 min";
+        const receivedHostUsername = msg.hostUsername;
+        
+        // Update state for display
+        setHostUsername(receivedHostUsername);
+        setMode(receivedMode);
+        setTime(receivedTime);
+        
+        // Update refs for use in game_start
+        modeRef.current = receivedMode;
+        timeRef.current = receivedTime;
+        hostUsernameRef.current = receivedHostUsername;
+        
         setJoined(true);
       } else if (msg.type === "color_update") {
         console.log("[JoinGame] Setting flipped to:", msg.flipped);
@@ -81,11 +97,11 @@ export default function JoinGame() {
         remove();
         const guestColor = msg.flipped ? "w" : "b";
         navigation.navigate("GameRoom", {
-          mode,
-          time,
+          mode: modeRef.current,
+          time: timeRef.current,
           username,
           flipped: !msg.flipped,
-          opponentUsername: hostUsername,
+          opponentUsername: hostUsernameRef.current,
           myColor: guestColor,
         });
       } else if (msg.type === "error") {

@@ -2,7 +2,7 @@ const { WebSocketServer } = require("ws");
 
 const wss = new WebSocketServer({ port: 3001 });
 
-// rooms: { [code]: { host: ws, guest: ws | null, hostUsername: string, guestUsername: string | null } }
+// rooms: { [code]: { host: ws, guest: ws | null, hostUsername: string, guestUsername: string | null, mode: string, time: string } }
 const rooms = {};
 
 function generateCode() {
@@ -24,7 +24,14 @@ wss.on("connection", (ws) => {
     if (msg.type === "create") {
       let code;
       do { code = generateCode(); } while (rooms[code]);
-      rooms[code] = { host: ws, guest: null, hostUsername: msg.username, guestUsername: null };
+      rooms[code] = { 
+        host: ws, 
+        guest: null, 
+        hostUsername: msg.username, 
+        guestUsername: null,
+        mode: msg.mode || "Rapid",
+        time: msg.time || "10 min"
+      };
       ws._code = code;
       ws._role = "host";
       send(ws, { type: "created", code });
@@ -38,7 +45,7 @@ wss.on("connection", (ws) => {
       room.guestUsername = msg.username;
       ws._code = msg.code;
       ws._role = "guest";
-      send(ws, { type: "joined", hostUsername: room.hostUsername });
+      send(ws, { type: "joined", hostUsername: room.hostUsername, mode: room.mode, time: room.time });
       send(room.host, { type: "opponent_joined", guestUsername: msg.username });
     }
 

@@ -64,7 +64,7 @@ export default function SelectMode() {
 
         <Pressable
           style={({ pressed }) => [styles.optionBtn, styles.joinBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => navigation.navigate("JoinGame", { mode, time, username })}
+          onPress={() => navigation.navigate("JoinGame", { username })}
         >
           <MaterialIcons name="login" size={28} color="#69923e" />
           <View style={styles.optionText}>
