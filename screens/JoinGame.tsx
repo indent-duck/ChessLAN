@@ -25,11 +25,15 @@ export default function JoinGame() {
   const [flipped, setFlipped] = useState(false);
   const [mode, setMode] = useState<string>("Rapid");
   const [time, setTime] = useState<string>("10 min");
+  const [variant, setVariant] = useState<string>("standard");
+  const [chess960Fen, setChess960Fen] = useState<string | null>(null);
 
   // Use refs to track the latest mode and time values for use in the listener
   const modeRef = useRef<string>("Rapid");
   const timeRef = useRef<string>("10 min");
   const hostUsernameRef = useRef<string | null>(null);
+  const variantRef = useRef<string>("standard");
+  const chess960FenRef = useRef<string | null>(null);
 
   const slideAnim = useRef(new Animated.Value(80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -78,16 +82,22 @@ export default function JoinGame() {
         const receivedMode = msg.mode || "Rapid";
         const receivedTime = msg.time || "10 min";
         const receivedHostUsername = msg.hostUsername;
+        const receivedVariant = msg.variant || "standard";
+        const receivedChess960Fen = msg.chess960Fen || null;
         
         // Update state for display
         setHostUsername(receivedHostUsername);
         setMode(receivedMode);
         setTime(receivedTime);
+        setVariant(receivedVariant);
+        setChess960Fen(receivedChess960Fen);
         
         // Update refs for use in game_start
         modeRef.current = receivedMode;
         timeRef.current = receivedTime;
         hostUsernameRef.current = receivedHostUsername;
+        variantRef.current = receivedVariant;
+        chess960FenRef.current = receivedChess960Fen;
         
         setJoined(true);
       } else if (msg.type === "color_update") {
@@ -103,6 +113,8 @@ export default function JoinGame() {
           flipped: !msg.flipped,
           opponentUsername: hostUsernameRef.current,
           myColor: guestColor,
+          variant: variantRef.current,
+          chess960Fen: msg.chess960Fen || chess960FenRef.current,
         });
       } else if (msg.type === "error") {
         remove();
@@ -124,9 +136,17 @@ export default function JoinGame() {
       <View style={styles.top}>
         <Text style={styles.label}>Joining · {mode}</Text>
         <Text style={styles.title}>{joined && hostUsername ? `${hostUsername}'s Room` : "Join Room"}</Text>
-        <View style={styles.timeBadge}>
-          <MaterialIcons name="timer" size={14} color="#69923e" />
-          <Text style={styles.timeText}>{time} per side</Text>
+        <View style={styles.badgeRow}>
+          {variant === 'chess960' && (
+            <View style={styles.variantBadge}>
+              <MaterialIcons name="shuffle" size={14} color="#7b5a3a" />
+              <Text style={styles.variantText}>Chess960</Text>
+            </View>
+          )}
+          <View style={styles.timeBadge}>
+            <MaterialIcons name="timer" size={14} color="#69923e" />
+            <Text style={styles.timeText}>{time} per side</Text>
+          </View>
         </View>
       </View>
 
@@ -260,6 +280,25 @@ const styles = StyleSheet.create({
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 40,
     color: "#2c2b29",
+  },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  variantBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#f5e6d3",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  variantText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 13,
+    color: "#7b5a3a",
   },
   timeBadge: {
     flexDirection: "row",

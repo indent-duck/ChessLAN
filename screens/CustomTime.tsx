@@ -14,6 +14,7 @@ export default function CustomTime() {
   const { username } = route.params ?? { username: "" };
   const [minutes, setMinutes] = useState(5);
   const [increment, setIncrement] = useState(0);
+  const [variant, setVariant] = useState<'standard' | 'chess960'>('standard');
 
   const slideAnim = useRef(new Animated.Value(80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -34,7 +35,7 @@ export default function CustomTime() {
 
   const handlePlay = () => {
     const time = increment > 0 ? `${minutes}+${increment}` : `${minutes} min`;
-    navigation.navigate("HostGame", { mode: "Custom", time, username });
+    navigation.navigate("HostGame", { mode: "Custom", time, username, variant });
   };
 
   return (
@@ -46,11 +47,17 @@ export default function CustomTime() {
       <View style={styles.top}>
         <Text style={styles.label}>Game Mode</Text>
         <Text style={styles.title}>Custom</Text>
-        <View style={styles.previewBadge}>
-          <MaterialIcons name="timer" size={14} color="#69923e" />
-          <Text style={styles.previewText}>
-            {minutes} min{increment > 0 ? ` + ${increment}s` : ""}
-          </Text>
+        <View style={styles.badgeRow}>
+          <View style={styles.variantBadge}>
+            <MaterialIcons name={variant === 'chess960' ? "shuffle" : "grid-on"} size={14} color="#7b5a3a" />
+            <Text style={styles.variantText}>{variant === 'chess960' ? 'Chess960' : 'Standard'}</Text>
+          </View>
+          <View style={styles.previewBadge}>
+            <MaterialIcons name="timer" size={14} color="#69923e" />
+            <Text style={styles.previewText}>
+              {minutes} min{increment > 0 ? ` + ${increment}s` : ""}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -82,6 +89,28 @@ export default function CustomTime() {
                 <Text style={[styles.chipText, increment === s && styles.chipTextActive]}>{s}</Text>
               </Pressable>
             ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Board Variant</Text>
+          <View style={styles.chips}>
+            <Pressable
+              onPress={() => setVariant('standard')}
+              style={[styles.variantChip, variant === 'standard' && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, variant === 'standard' && styles.chipTextActive]}>
+                Standard
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setVariant('chess960')}
+              style={[styles.variantChip, variant === 'chess960' && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, variant === 'chess960' && styles.chipTextActive]}>
+                Chess960
+              </Text>
+            </Pressable>
           </View>
         </View>
 
@@ -127,6 +156,11 @@ const styles = StyleSheet.create({
     fontSize: 40,
     color: "#2c2b29",
   },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   previewBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -140,6 +174,20 @@ const styles = StyleSheet.create({
     fontFamily: "GoogleSansFlex_500Medium",
     fontSize: 13,
     color: "#69923e",
+  },
+  variantBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#f5e6d3",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  variantText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 13,
+    color: "#7b5a3a",
   },
   panel: {
     flex: 1,
@@ -177,6 +225,14 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: "#69923e",
+  },
+  variantChip: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    minWidth: 100,
+    alignItems: 'center',
   },
   playBtn: {
     backgroundColor: "white",

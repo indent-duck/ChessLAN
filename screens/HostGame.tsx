@@ -9,23 +9,26 @@ import { sendMsg, addListener } from "../hooks/useSocket";
 export default function HostGame() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const route = useRoute<any>();
-  const { mode, time, username } = route.params ?? {
+  const { mode, time, username, variant = 'standard' } = route.params ?? {
     mode: "Rapid",
     time: "10 min",
     username: "",
+    variant: "standard",
   };
   const [flipped, setFlipped] = useState(false);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [opponentName, setOpponentName] = useState<string | null>(null);
+  const [chess960Fen, setChess960Fen] = useState<string | null>(null);
 
   const slideAnim = useRef(new Animated.Value(80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    sendMsg({ type: "create", username, mode, time });
+    sendMsg({ type: "create", username, mode, time, variant });
     const remove = addListener((msg) => {
       if (msg.type === "created") {
         setRoomCode(msg.code);
+        if (msg.chess960Fen) setChess960Fen(msg.chess960Fen);
       } else if (msg.type === "opponent_joined") {
         setOpponentName(msg.guestUsername);
       } else if (msg.type === "guest_left") {
@@ -60,14 +63,15 @@ export default function HostGame() {
   };
 
   const handleStart = () => {
-    sendMsg({ type: "start", flipped });
+    sendMsg({ type: "start", flipped, variant });
     const remove = addListener((msg) => {
       if (msg.type === "game_start") {
         remove();
         navigation.navigate("GameRoom", {
-          mode, time, username, flipped,
+          mode, time, username, flipped, variant,
           opponentUsername: opponentName,
           myColor: flipped ? "b" : "w",
+          chess960Fen: msg.chess960Fen || chess960Fen,
         });
       }
     });
@@ -82,9 +86,17 @@ export default function HostGame() {
       <View style={styles.top}>
         <Text style={styles.label}>Hosting · {mode}</Text>
         <Text style={styles.title}>{username}'s Room</Text>
-        <View style={styles.timeBadge}>
-          <MaterialIcons name="timer" size={14} color="#69923e" />
-          <Text style={styles.timeText}>{time} per side</Text>
+        <View style={styles.badgeRow}>
+          {variant === 'chess960' && (
+            <View style={styles.variantBadge}>
+              <MaterialIcons name="shuffle" size={14} color="#7b5a3a" />
+              <Text style={styles.variantText}>Chess960</Text>
+            </View>
+          )}
+          <View style={styles.timeBadge}>
+            <MaterialIcons name="timer" size={14} color="#69923e" />
+            <Text style={styles.timeText}>{time} per side</Text>
+          </View>
         </View>
       </View>
 
@@ -209,6 +221,11 @@ const styles = StyleSheet.create({
     fontSize: 30,
     color: "#2c2b29",
   },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   timeBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -222,6 +239,20 @@ const styles = StyleSheet.create({
     fontFamily: "GoogleSansFlex_500Medium",
     fontSize: 13,
     color: "#69923e",
+  },
+  variantBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#f5e6d3",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  variantText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 13,
+    color: "#7b5a3a",
   },
   panel: {
     flex: 1,

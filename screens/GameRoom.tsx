@@ -17,6 +17,51 @@ import { Chess, Square } from "chess.js";
 import Trophy from "../assets/svg/trophy.svg";
 import { addListener, sendMsg } from "../hooks/useSocket";
 
+// Generate a valid Chess960 starting position
+function generateChess960Position(): string {
+  let position: (string | null)[] = new Array(8).fill(null);
+  
+  // Place bishops on opposite colors
+  const lightSquares = [1, 3, 5, 7]; // b, d, f, h files (light)
+  const darkSquares = [0, 2, 4, 6];  // a, c, e, g files (dark)
+  
+  const lightBishopPos = lightSquares[Math.floor(Math.random() * lightSquares.length)];
+  const darkBishopPos = darkSquares[Math.floor(Math.random() * darkSquares.length)];
+  
+  position[lightBishopPos] = 'b';
+  position[darkBishopPos] = 'b';
+  
+  // Get remaining empty positions
+  let emptyPositions = position.map((p, i) => p === null ? i : null).filter(i => i !== null) as number[];
+  
+  // Place queen in one of the remaining positions
+  const queenIndex = Math.floor(Math.random() * emptyPositions.length);
+  position[emptyPositions[queenIndex]] = 'q';
+  emptyPositions = emptyPositions.filter((_, idx) => idx !== queenIndex);
+  
+  // Place knights in two of the remaining positions
+  const knight1Index = Math.floor(Math.random() * emptyPositions.length);
+  position[emptyPositions[knight1Index]] = 'n';
+  emptyPositions = emptyPositions.filter((_, idx) => idx !== knight1Index);
+  
+  const knight2Index = Math.floor(Math.random() * emptyPositions.length);
+  position[emptyPositions[knight2Index]] = 'n';
+  emptyPositions = emptyPositions.filter((_, idx) => idx !== knight2Index);
+  
+  // Place rooks and king in the remaining 3 positions (R-K-R pattern)
+  // King must be between the two rooks
+  emptyPositions.sort((a, b) => a - b);
+  position[emptyPositions[0]] = 'r';
+  position[emptyPositions[1]] = 'k';
+  position[emptyPositions[2]] = 'r';
+  
+  // Build FEN string - convert null to empty string shouldn't happen but safety check
+  const backRank = position.map(p => p || '?').join('');
+  const fen = `${backRank}/pppppppp/8/8/8/8/PPPPPPPP/${backRank.toUpperCase()} w KQkq - 0 1`;
+  
+  return fen;
+}
+
 function parseTime(t: string): number {
   const parts = t.match(/(\d+)(?:\+(\d+))?/);
   if (!parts) return 600;
@@ -70,11 +115,22 @@ const PIECES: Record<string, PieceComponent> = {
 export default function GameRoom() {
   const navigation = useNavigation();
   const route = useRoute<any>();
-  const { mode, time, username, flipped, myColor, opponentUsername } = route.params ?? {};
+  const { mode, time, username, flipped, myColor, opponentUsername, variant = 'standard', chess960Fen } = route.params ?? {};
   // myColor is "w" or "b" for multiplayer; undefined means local 2-player
   const increment = parseIncrement(time ?? "");
 
-  const chessRef = useRef(new Chess());
+  // Initialize chess instance with appropriate starting position
+  const initializeChess = () => {
+    if (variant === 'chess960') {
+      // Use the FEN from server if available (multiplayer), otherwise generate one (local game)
+      const fen = chess960Fen || generateChess960Position();
+      return new Chess(fen);
+    } else {
+      return new Chess();
+    }
+  };
+
+  const chessRef = useRef<Chess>(initializeChess());
   const [board, setBoard] = useState(() => chessRef.current.board());
   const [turn, setTurn] = useState<"w" | "b">("w");
   const [selected, setSelected] = useState<Square | null>(null);
