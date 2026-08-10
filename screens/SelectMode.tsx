@@ -73,6 +73,17 @@ export default function SelectMode() {
           </View>
           <MaterialIcons name="chevron-right" size={22} color="#aaa" />
         </Pressable>
+
+        <View style={styles.infoBox}>
+          <MaterialIcons name="info-outline" size={18} color="#ddeacc" />
+          <View style={styles.infoTextContainer}>
+            <Text style={styles.infoTitle}>Before you start:</Text>
+            <Text style={styles.infoText}>
+              • Host: Configure server IP in Home → Settings{'\n'}
+              • Guest: Get host's IP and update in Settings
+            </Text>
+          </View>
+        </View>
       </Animated.View>
     </SafeAreaView>
   );
@@ -158,5 +169,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "rgba(255,255,255,0.6)",
     marginTop: 2,
+  },
+  infoBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 14,
+    padding: 14,
+    marginTop: "auto",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+  },
+  infoTextContainer: {
+    flex: 1,
+    gap: 4,
+  },
+  infoTitle: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 13,
+    color: "#ddeacc",
+  },
+  infoText: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.7)",
+    lineHeight: 17,
   },
 });

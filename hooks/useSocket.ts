@@ -1,13 +1,14 @@
-import { SERVER_URL } from "../config";
+import { getServerUrl } from "../config";
 
 type MsgHandler = (msg: any) => void;
 
 let socket: WebSocket | null = null;
 const listeners: Set<MsgHandler> = new Set();
 
-export function getSocket(): WebSocket {
+export async function getSocket(): Promise<WebSocket> {
   if (!socket || socket.readyState === WebSocket.CLOSED) {
-    socket = new WebSocket(SERVER_URL);
+    const url = await getServerUrl();
+    socket = new WebSocket(url);
     socket.onmessage = (e) => {
       let msg: any;
       try { msg = JSON.parse(e.data); } catch { return; }
@@ -23,8 +24,8 @@ export function closeSocket() {
   listeners.clear();
 }
 
-export function sendMsg(msg: object) {
-  const ws = getSocket();
+export async function sendMsg(msg: object) {
+  const ws = await getSocket();
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(msg));
   } else {

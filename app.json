@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Chess-Dwight",
-    "slug": "Chess-Dwight",
+    "name": "ChessLAN",
+    "slug": "ChessLAN",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

@@ -7,6 +7,9 @@ import {
   Animated,
   TextInput,
   Pressable,
+  Modal,
+  Alert,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRef, useState, useCallback, useEffect } from "react";
@@ -19,6 +22,7 @@ import Card from "../components/GameCard";
 import King from "../assets/svg/king.svg";
 import Queen from "../assets/svg/queen.svg";
 import Chessboard from "../assets/svg/chessboard.svg";
+import { getServerUrl, setServerUrl } from "../config";
 
 const CARD_WIDTH = 260;
 const CARD_GAP = 16;
@@ -43,9 +47,19 @@ export default function Home() {
   ).current;
   const [username, setUsername] = useState("username");
   const [editing, setEditing] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [aboutVisible, setAboutVisible] = useState(false);
+  const [serverUrl, setServerUrlState] = useState("");
+  const [tempServerUrl, setTempServerUrl] = useState("");
 
   useEffect(() => {
-    AsyncStorage.getItem("username").then((val) => { if (val) setUsername(val); });
+    AsyncStorage.getItem("username").then((val) => {
+      if (val) setUsername(val);
+    });
+    getServerUrl().then((url) => {
+      setServerUrlState(url);
+      setTempServerUrl(url);
+    });
   }, []);
   const inputRef = useRef<TextInput>(null);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 });
@@ -73,12 +87,38 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       setEditing(false);
-    }, [])
+    }, []),
   );
 
   const startEditing = () => {
     setEditing(true);
     setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleSaveServerUrl = async () => {
+    if (!tempServerUrl.trim()) {
+      Alert.alert("Invalid URL", "Server URL cannot be empty");
+      return;
+    }
+    if (
+      !tempServerUrl.startsWith("ws://") &&
+      !tempServerUrl.startsWith("wss://")
+    ) {
+      Alert.alert("Invalid URL", "Server URL must start with ws:// or wss://");
+      return;
+    }
+    await setServerUrl(tempServerUrl);
+    setServerUrlState(tempServerUrl);
+    setSettingsVisible(false);
+    Alert.alert(
+      "Success",
+      "Server URL updated. New connections will use this address.",
+    );
+  };
+
+  const handleCancelSettings = () => {
+    setTempServerUrl(serverUrl);
+    setSettingsVisible(false);
   };
 
   return (
@@ -97,14 +137,24 @@ export default function Home() {
                   style={styles.usernameInput}
                   value={username}
                   onChangeText={setUsername}
-                  onSubmitEditing={() => { AsyncStorage.setItem("username", username); setEditing(false); }}
+                  onSubmitEditing={() => {
+                    AsyncStorage.setItem("username", username);
+                    setEditing(false);
+                  }}
                   returnKeyType="done"
                 />
               ) : (
                 <Text style={styles.username}>{username}</Text>
               )}
               <Pressable
-                onPress={editing ? () => { AsyncStorage.setItem("username", username); setEditing(false); } : startEditing}
+                onPress={
+                  editing
+                    ? () => {
+                        AsyncStorage.setItem("username", username);
+                        setEditing(false);
+                      }
+                    : startEditing
+                }
                 hitSlop={8}
               >
                 <MaterialIcons
@@ -115,11 +165,25 @@ export default function Home() {
               </Pressable>
             </View>
           </View>
+          <Pressable
+            onPress={() => setAboutVisible(true)}
+            style={styles.aboutBtn}
+            hitSlop={8}
+          >
+            <MaterialIcons name="info-outline" size={22} color="#777" />
+          </Pressable>
+          <Pressable
+            onPress={() => setSettingsVisible(true)}
+            style={styles.settingsBtn}
+            hitSlop={8}
+          >
+            <MaterialIcons name="settings" size={22} color="#777" />
+          </Pressable>
         </View>
 
         {/* Middle area */}
         <View style={styles.heroArea}>
-          <Text style={styles.heroTitle}>Checkmate ♟</Text>
+          <Text style={styles.heroTitle}>ChessLAN ♟</Text>
           <Text style={styles.heroSubtitle}>Ready for a match?</Text>
         </View>
       </View>
@@ -152,7 +216,12 @@ export default function Home() {
                   opacity: opacityAnims[index],
                 }}
               >
-                <Card icon={item.icon} title={item.title} time={item.time} username={username} />
+                <Card
+                  icon={item.icon}
+                  title={item.title}
+                  time={item.time}
+                  username={username}
+                />
               </Animated.View>
             )}
             onViewableItemsChanged={onViewableItemsChanged}
@@ -172,8 +241,119 @@ export default function Home() {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Chess Dwight v1.0.0</Text>
+        <Text style={styles.footerText}>ChessLAN v1.0.0</Text>
       </View>
+
+      {/* Settings Modal */}
+      <Modal visible={settingsVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Server Settings</Text>
+              <Pressable onPress={handleCancelSettings} hitSlop={8}>
+                <MaterialIcons name="close" size={24} color="#2c2b29" />
+              </Pressable>
+            </View>
+            <ScrollView
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.settingsLabel}>WebSocket Server URL</Text>
+              <Text style={styles.settingsHint}>
+                Enter your server's IP address and port
+              </Text>
+              <TextInput
+                style={styles.serverInput}
+                value={tempServerUrl}
+                onChangeText={setTempServerUrl}
+                placeholder="ws://192.168.x.x:3001"
+                placeholderTextColor="#999"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+              />
+
+              <View style={styles.instructionsBox}>
+                <View style={styles.instructionHeader}>
+                  <MaterialIcons
+                    name="info-outline"
+                    size={18}
+                    color="#69923e"
+                  />
+                  <Text style={styles.instructionTitle}>
+                    Where to find the IP
+                  </Text>
+                </View>
+                <View style={styles.instructionSteps}>
+                  <Text style={styles.instructionStep}>
+                    <Text style={styles.instructionStepBold}>Ask the host</Text>{" "}
+                    for their server IP address
+                  </Text>
+                  <Text style={styles.instructionStep}>
+                    <Text style={styles.instructionStepBold}>
+                      Host can find it:
+                    </Text>
+                    {"\n"}
+                    Settings → Wi-Fi → Tap your network{"\n"}
+                    Look for "IP Address" (192.168.x.x)
+                  </Text>
+                  <Text style={styles.instructionStep}>
+                    <Text style={styles.instructionStepBold}>Format:</Text>{" "}
+                    ws://[IP]:3001{"\n"}
+                    Example: ws://192.168.1.100:3001
+                  </Text>
+                </View>
+                <View style={styles.instructionNote}>
+                  <Text style={styles.instructionNoteText}>
+                    Both players must be on the same WiFi
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.settingsBtns}>
+                <Pressable
+                  style={styles.cancelBtn}
+                  onPress={handleCancelSettings}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={styles.saveBtn} onPress={handleSaveServerUrl}>
+                  <Text style={styles.saveBtnText}>Save</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* About Modal */}
+      <Modal visible={aboutVisible} transparent animationType="fade">
+        <Pressable
+          style={styles.aboutModalOverlay}
+          onPress={() => setAboutVisible(false)}
+        >
+          <Pressable
+            style={styles.aboutModalBox}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.aboutHeader}>
+              <MaterialIcons name="info" size={48} color="#69923e" />
+            </View>
+            <Text style={styles.aboutTitle}>ChessLAN</Text>
+            <Text style={styles.aboutVersion}>Version 1.0.0</Text>
+            <View style={styles.aboutDivider} />
+            <Text style={styles.aboutLabel}>Created by</Text>
+            <Text style={styles.aboutCreator}>Lee Johnrich H. Ramirez</Text>
+            <Text style={styles.aboutProgram}>
+              BS in Information Technology{"\n"}
+              Cavite State University - Main
+            </Text>
+            <Text style={styles.aboutDescription}>
+              Play chess anytime, anywhere with friends over local WiFi.
+            </Text>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -290,5 +470,216 @@ const styles = StyleSheet.create({
     fontFamily: "GoogleSansFlex_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.4)",
+  },
+  settingsBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f5f5f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  aboutBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f5f5f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalBox: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 32,
+    height: "85%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  modalTitle: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 20,
+    color: "#2c2b29",
+  },
+  modalContent: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 24,
+  },
+  settingsLabel: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 14,
+    color: "#2c2b29",
+    marginBottom: 4,
+  },
+  settingsHint: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 4,
+  },
+  serverInput: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 15,
+    color: "#2c2b29",
+    backgroundColor: "#f5f5f0",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  settingsBtns: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 16,
+  },
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: "#e0e0e0",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  cancelBtnText: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 15,
+    color: "#666",
+  },
+  saveBtn: {
+    flex: 1,
+    backgroundColor: "#69923e",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  saveBtnText: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 15,
+    color: "#ffffff",
+  },
+  instructionsBox: {
+    backgroundColor: "#f5f5f0",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+    gap: 12,
+  },
+  instructionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  instructionTitle: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 14,
+    color: "#2c2b29",
+  },
+  instructionSteps: {
+    gap: 10,
+  },
+  instructionStep: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 13,
+    color: "#444",
+    lineHeight: 18,
+  },
+  instructionStepBold: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    color: "#2c2b29",
+  },
+  instructionNote: {
+    backgroundColor: "#ddeacc",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  instructionNoteText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 12,
+    color: "#69923e",
+    lineHeight: 17,
+  },
+  aboutModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  aboutModalBox: {
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    marginHorizontal: 32,
+    paddingVertical: 36,
+    paddingHorizontal: 28,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  aboutHeader: {
+    marginBottom: 16,
+  },
+  aboutTitle: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 26,
+    color: "#2c2b29",
+    marginBottom: 4,
+  },
+  aboutVersion: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 20,
+  },
+  aboutDivider: {
+    width: "100%",
+    height: 1,
+    backgroundColor: "#e0e0e0",
+    marginBottom: 20,
+  },
+  aboutLabel: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 4,
+  },
+  aboutCreator: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 20,
+    color: "#69923e",
+    marginBottom: 8,
+  },
+  aboutProgram: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 13,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  aboutDescription: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 20,
+    paddingHorizontal: 4,
   },
 });
