@@ -179,8 +179,9 @@ export default function GameRoom() {
   const [opponentAbandoned, setOpponentAbandoned] = useState(false);
 
   const { width } = useWindowDimensions();
-  const boardSize = width - 32;
-  const squareSize = boardSize / 8;
+  const rawBoardSize = width - 32;
+  const squareSize = Math.floor(rawBoardSize / 8);
+  const boardSize = squareSize * 8;
 
   const opponentName = opponentUsername ?? "Opponent";
   const playerColor: "w" | "b" = myColor ?? (flipped ? "b" : "w");
