@@ -25,6 +25,7 @@ import Queen from "../assets/svg/queen.svg";
 import Chessboard from "../assets/svg/chessboard.svg";
 import { getServerUrl, setServerUrl } from "../config";
 import ChessLANFooter from "../components/ChessLANFooter";
+import BoardPreview from "../components/BoardPreview";
 
 const CARD_WIDTH = 260;
 const CARD_GAP = 16;
@@ -375,6 +376,9 @@ export default function Home() {
                   <Text style={styles.saveBtnText}>Save</Text>
                 </Pressable>
               </View>
+
+              {/* Board Preview Button */}
+              <BoardPreview />
             </ScrollView>
           </View>
         </View>
