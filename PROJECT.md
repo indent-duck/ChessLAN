@@ -23,8 +23,6 @@ A React Native (Expo ~54) mobile chess app for **true local network multiplayer*
 ### Key Files:
 - `hooks/useLocalServer.ts` - Embedded TCP server for host (React Native)
 - `hooks/useLocalClient.ts` - TCP client for guest
-- `hooks/useSocket.ts` - Legacy WebSocket client (for development with Node.js server)
-- `server/` - Node.js WebSocket server (development only, not used in production APK)
 
 ## Navigation Flow
 ```
@@ -33,7 +31,7 @@ Home → SelectMode → HostGame → GameRoom
        CustomTime → SelectMode (for custom time only)
 ```
 - Home: username input (editable inline), horizontal scrollable card carousel to pick game mode, Settings and About buttons
-- SelectMode: choose Host Game or Join Game for the selected mode/time
+- SelectMode: choose variant (Standard/Chess960) and start hosting
 - CustomTime: pick minutes (1–30) + increment (0–30s), navigates to SelectMode with custom time string (only for Custom mode)
 - HostGame: starts local server, shows room code, wait for guest, pick color (swap toggle), Start Game → GameRoom
 - JoinGame: enter 4-character room code, connects to host, wait for start → GameRoom
@@ -52,17 +50,23 @@ Home → SelectMode → HostGame → GameRoom
 
 ### SelectMode (`screens/SelectMode.tsx`)
 - Receives `mode`, `time`, `username` as route params
-- Two buttons: Host Game → HostGame, Join Game → JoinGame
+- **Variant selection:** Standard or Chess960 with toggle buttons
+- Standard: Traditional chess starting position
+- Chess960: Fischer Random Chess with randomized back rank
+- Shows variant description when Chess960 is selected
+- Start Hosting button navigates to HostGame with selected variant
 - Slide-up + fade-in panel animation on mount, reverse on back
 
 ### HostGame (`screens/HostGame.tsx`)
-- Receives `mode`, `time`, `username`, `variant`
+- Receives `mode`, `time`, `username`, `variant` (standard or chess960)
 - **Starts embedded TCP server** on port 3001 using `useLocalServer` hook
+- **Chess960 FEN generation:** If variant is chess960, generates random starting position
 - Generates 4-character room code automatically
 - `flipped` state toggles which color the host plays
 - Displays room code and waits for guest to join
 - Shows opponent username when guest connects
-- Start Game navigates to GameRoom with `{ mode, time, username, flipped, isHost: true }`
+- Shows Chess960 badge if variant is chess960
+- Start Game navigates to GameRoom with `{ mode, time, username, flipped, variant, chess960Fen, isHost: true }`
 - **Server runs on this phone** - no external server needed
 
 ### JoinGame (`screens/JoinGame.tsx`)
@@ -81,19 +85,20 @@ Home → SelectMode → HostGame → GameRoom
 - Navigates to SelectMode (skips HostGame/JoinGame choice)
 
 ### GameRoom (`screens/GameRoom.tsx`)
-- Receives `mode`, `time`, `username`, `flipped`, `myColor`, `opponentUsername`, `variant`, `isHost`
+- Receives `mode`, `time`, `username`, `flipped`, `myColor`, `opponentUsername`, `variant`, `chess960Fen`, `isHost`
 - **`isHost: true`** - Uses `useLocalServer` to receive moves from guest
 - **`isHost: false`** - Uses `useLocalClient` to receive moves from host
+- **Chess960 support:** Initializes board with custom FEN if provided
 - `chess.js` `Chess` instance in ref is source of truth for board state
 - `board` state derived from `chess.board()` after each move
 - Tapping own piece shows legal moves, tapping legal square executes move
 - Selected square highlighted in yellow
+- **Promotion UI:** Modal with piece selection (Queen, Rook, Bishop, Knight)
 - **Move syncing:** Moves sent via `sendNetworkMessage()` to opponent
 - **Move receiving:** Opponent moves received via `addNetworkListener()`
 - Per-player countdown timers with increment support
 - Timeout, checkmate, draw, resignation all synchronized
 - Board flip support via `flipped` param
-- Promotion auto-promotes to queen (TODO: promotion UI)
 - **Resign:** Syncs via network to opponent
 - **Draw offers:** Sent/received via network with 10-second timer
 - **Abandon:** Notifies opponent via network
@@ -105,7 +110,6 @@ Home → SelectMode → HostGame → GameRoom
 ## What's NOT done yet
 - UDP broadcasting for automatic host discovery (currently requires manual IP entry)
 - Reconnection handling if connection drops mid-game
-- Promotion UI (currently auto-promotes to queen)
 - Move sound effects
 - Vibration on captures
 - Game chat functionality
@@ -124,23 +128,25 @@ Home → SelectMode → HostGame → GameRoom
 ```
 
 ## What IS done
-- ✅ Embedded TCP server runs on host phone (port 3001)
-- ✅ Guest connects to host via TCP socket
-- ✅ Room code generation (4 characters) and validation
-- ✅ Opponent discovery and connection status
-- ✅ Color selection sync between devices
-- ✅ Game start coordination
-- ✅ **Real-time move synchronization** between phones
-- ✅ **Resign, draw offers, draw accept/decline** synchronized
-- ✅ **Game over states** (checkmate, timeout, resignation, draw) synchronized
-- ✅ Full chess UI with legal moves, captures, timers
-- ✅ Settings panel for configuring host IP address
-- ✅ Connection error handling and user feedback
-- ✅ About modal with creator credits (Lee Johnrich H. Ramirez, BS Information Technology, CvSU)
-- ✅ App renamed to ChessLAN (Local Area Network chess)
-- ✅ Splash screen with expo-splash-screen integration
-- ✅ Loading states and connection status indicators
-- ✅ **Complete local WiFi multiplayer** - no external server needed!
+- Embedded TCP server runs on host phone (port 3001)
+- Guest connects to host via TCP socket
+- Room code generation (4 characters) and validation
+- Opponent discovery and connection status
+- Color selection sync between devices
+- Game start coordination
+- **Chess960 variant** with FEN generation and synchronization
+- **Promotion UI** with piece selection modal
+- **Real-time move synchronization** between phones
+- **Resign, draw offers, draw accept/decline** synchronized
+- **Game over states** (checkmate, timeout, resignation, draw) synchronized
+- Full chess UI with legal moves, captures, timers
+- Settings panel for configuring host IP address
+- Connection error handling and user feedback
+- About modal with creator credits (Lee Johnrich H. Ramirez, BS Information Technology, CvSU)
+- App renamed to ChessLAN (Local Area Network chess)
+- Splash screen with expo-splash-screen integration
+- Loading states and connection status indicators
+- **Complete local WiFi multiplayer** - no external server needed
 
 ## Testing
 
@@ -170,41 +176,18 @@ eas build --profile preview --platform android
 Most realistic test but slow iteration (rebuild for each change).
 
 ### What to Keep/Remove
-**Can be safely deleted (no longer used in production):**
-- ❌ `hooks/useSocket.ts` - Old WebSocket client (not imported anywhere)
-- ❌ `server/` folder - Node.js WebSocket server (development only)
-- ❌ `SERVER_SETUP.md` - Setup guide for old Node.js server
-- ❌ `IMPLEMENTATION_COMPLETE.md` - One-time implementation doc
-- ❌ `IMPLEMENTATION_SUMMARY.md` - One-time implementation doc
-- ❌ `LOCAL_MULTIPLAYER_GUIDE.md` - Redundant with README
-- ❌ `QUICKSTART.md` - Redundant with README
-- ❌ `TESTING_CHECKLIST.md` - Can move to PROJECT.md if needed
-
 **Must keep (actively used):**
-- ✅ `hooks/useLocalServer.ts` - Host TCP server
-- ✅ `hooks/useLocalClient.ts` - Guest TCP client
-- ✅ `config.ts` - Server URL configuration
-- ✅ `PROJECT.md` - Main documentation
-- ✅ `README.md` - Project overview
-- ✅ All screen files and components
+- `hooks/useLocalServer.ts` - Host TCP server
+- `hooks/useLocalClient.ts` - Guest TCP client
+- `config.ts` - Server URL configuration
+- `PROJECT.md` - Main documentation
+- `README.md` - Project overview
+- All screen files and components
 
-**Note:** You can keep the documentation files if you want comprehensive docs, but they're not needed for the app to function.
+**Can be safely deleted (legacy/unused):**
+- `hooks/useSocket.ts` - Old WebSocket client (not imported anywhere)
 
-### Optional Cleanup Commands
-If you want to remove unused files:
-```bash
-# Remove old WebSocket hook (not used)
-rm hooks/useSocket.ts
-
-# Remove Node.js server folder (not needed for production)
-rm -rf server/
-
-# Remove redundant documentation
-rm SERVER_SETUP.md IMPLEMENTATION_COMPLETE.md IMPLEMENTATION_SUMMARY.md
-rm LOCAL_MULTIPLAYER_GUIDE.md QUICKSTART.md TESTING_CHECKLIST.md
-```
-
-Or keep everything for reference - your choice!
+Note: No external documentation files exist (SERVER_SETUP.md, TESTING_CHECKLIST.md, etc.) - they were already removed.
 
 ## Design language
 - Background: `#f5f5f0` (off-white) for pre-game screens, `#333638` (dark) for GameRoom
