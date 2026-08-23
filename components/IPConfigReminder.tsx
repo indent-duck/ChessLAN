@@ -13,15 +13,15 @@ export default function IPConfigReminder({ variant }: IPConfigReminderProps) {
         <Text style={styles.reminderTitle}>Network Configuration Required</Text>
         {variant === "host" ? (
           <Text style={styles.reminderText}>
-            • Configure your IP in Settings (Home screen){'\n'}
-            • Find your IP in WiFi settings (192.168.x.x){'\n'}
-            • Share your IP with your opponent
+            • Find your device IP in WiFi/Hotspot settings{'\n'}
+            • Share your IP and room code with your opponent{'\n'}
+            • Both devices must be on the same network
           </Text>
         ) : (
           <Text style={styles.reminderText}>
             • Ask the host for their IP address{'\n'}
-            • Configure it in Settings (Home screen){'\n'}
-            • Format: ws://[IP]:3001 (e.g., ws://192.168.1.100:3001)
+            • Use "Configure Host IP" button to set it{'\n'}
+            • Enter only IP (e.g., 192.168.1.100), not full URL
           </Text>
         )}
       </View>

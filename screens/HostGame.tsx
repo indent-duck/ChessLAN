@@ -7,6 +7,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useLocalServer } from "../hooks/useLocalServer";
 import ChessLANFooter from "../components/ChessLANFooter";
 import IPConfigReminder from "../components/IPConfigReminder";
+import { getDeviceIPv4, isHotspotActive, getDefaultHotspotIP } from "../utils/networkUtils";
+import { getServerIP, getConnectionMode } from "../config";
 
 export default function HostGame() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -19,6 +21,11 @@ export default function HostGame() {
   };
   const [flipped, setFlipped] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [deviceIP, setDeviceIP] = useState<string | null>(null);
+  const [configuredIP, setConfiguredIP] = useState<string | null>(null);
+  const [ipLoading, setIpLoading] = useState(true);
+  const [hotspotActive, setHotspotActive] = useState<boolean | null>(null);
+  const [connectionMode, setConnectionModeState] = useState<'wifi' | 'hotspot'>('wifi');
 
   const localServer = useLocalServer();
   const { roomCode, guestUsername: opponentName, needsRestart, chess960Fen, startServer, stopServer, forceCleanup, updateColor, startGame: startLocalGame } = localServer;
@@ -29,6 +36,23 @@ export default function HostGame() {
   useEffect(() => {
     const initConnection = async () => {
       try {
+        // Get connection mode
+        const mode = await getConnectionMode();
+        setConnectionModeState(mode);
+        
+        // Get device IP first
+        setIpLoading(true);
+        const ip = await getDeviceIPv4();
+        setDeviceIP(ip);
+        
+        // Check if hotspot is active (for hotspot mode)
+        if (mode === 'hotspot') {
+          const isActive = await isHotspotActive();
+          setHotspotActive(isActive);
+        }
+        
+        setIpLoading(false);
+        
         // Force cleanup any existing server before starting
         console.log('[HostGame] Initializing - cleaning up any existing server');
         forceCleanup();
@@ -41,6 +65,7 @@ export default function HostGame() {
       } catch (error) {
         setConnectionError("Failed to start local server. Please try again.");
         console.error("Server start error:", error);
+        setIpLoading(false);
       }
     };
     
@@ -108,24 +133,29 @@ export default function HostGame() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <Pressable onPress={handleBack} style={styles.backBtn} hitSlop={12}>
-        <MaterialIcons name="arrow-back" size={24} color="#1a1a1a" />
-      </Pressable>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable onPress={handleBack} style={styles.backBtn} hitSlop={12}>
+          <MaterialIcons name="arrow-back" size={24} color="#1a1a1a" />
+        </Pressable>
+        <View style={styles.headerCenter}>
+          <Text style={styles.label}>Hosting · {mode}</Text>
+          <Text style={styles.title}>{username}'s Room</Text>
+        </View>
+        <View style={styles.headerSpacer} />
+      </View>
 
-      <View style={styles.top}>
-        <Text style={styles.label}>Hosting · {mode}</Text>
-        <Text style={styles.title}>{username}'s Room</Text>
-        <View style={styles.badgeRow}>
-          {variant === 'chess960' && (
-            <View style={styles.variantBadge}>
-              <MaterialIcons name="shuffle" size={14} color="#7b5a3a" />
-              <Text style={styles.variantText}>Chess960</Text>
-            </View>
-          )}
-          <View style={styles.timeBadge}>
-            <MaterialIcons name="timer" size={14} color="#69923e" />
-            <Text style={styles.timeText}>{time} per side</Text>
+      {/* Badges Row */}
+      <View style={styles.badgesContainer}>
+        {variant === 'chess960' && (
+          <View style={styles.variantBadge}>
+            <MaterialIcons name="shuffle" size={14} color="#7b5a3a" />
+            <Text style={styles.variantText}>Chess960</Text>
           </View>
+        )}
+        <View style={styles.timeBadge}>
+          <MaterialIcons name="timer" size={14} color="#69923e" />
+          <Text style={styles.timeText}>{time} per side</Text>
         </View>
       </View>
 
@@ -200,8 +230,51 @@ export default function HostGame() {
 
         {roomCode && (
           <View style={styles.codeBox}>
-            <Text style={styles.codeLabel}>Room Code</Text>
-            <Text style={styles.codeText}>{roomCode}</Text>
+            <Text style={styles.shareHeader}>Share with your opponent:</Text>
+            
+            {/* Room Code */}
+            <View style={styles.infoRow}>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Room Code</Text>
+                <Text style={styles.infoValue}>{roomCode}</Text>
+              </View>
+            </View>
+
+            {/* IP Address */}
+            <View style={styles.infoRow}>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Your IP</Text>
+                {ipLoading ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : deviceIP ? (
+                  <Text style={styles.infoValue}>{deviceIP}</Text>
+                ) : (
+                  <Text style={styles.ipError}>Unable to detect IP</Text>
+                )}
+              </View>
+            </View>
+
+            {/* Hotspot Warning for hotspot mode */}
+            {!ipLoading && connectionMode === 'hotspot' && hotspotActive === false && (
+              <View style={styles.hotspotWarningBox}>
+                <MaterialIcons name="wifi-tethering-off" size={18} color="#fbbf24" />
+                <Text style={styles.hotspotWarningText}>
+                  ⚠️ Hotspot may be OFF. Current IP: {deviceIP || 'unknown'}.
+                  {'\n'}Expected: {getDefaultHotspotIP()}
+                </Text>
+              </View>
+            )}
+
+            {/* Hotspot Active Confirmation */}
+            {!ipLoading && connectionMode === 'hotspot' && hotspotActive === true && (
+              <View style={styles.hotspotActiveBox}>
+                <MaterialIcons name="check-circle" size={16} color="#10b981" />
+                <Text style={styles.hotspotActiveText}>
+                  Hotspot detected and active
+                </Text>
+              </View>
+            )}
+
             {!opponentName && (
               <>
                 <View style={styles.waitingRow}>
@@ -257,9 +330,15 @@ export default function HostGame() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#ffffff" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
   backBtn: {
-    marginLeft: 20,
-    marginTop: 8,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -267,28 +346,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  top: {
+  headerCenter: {
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 32,
-    gap: 8,
+    gap: 2,
+  },
+  headerSpacer: {
+    width: 40,
   },
   label: {
     fontFamily: "GoogleSansFlex_400Regular",
-    fontSize: 13,
+    fontSize: 12,
     color: "#888",
-    letterSpacing: 1.2,
+    letterSpacing: 1,
     textTransform: "uppercase",
   },
   title: {
     fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 30,
+    fontSize: 18,
     color: "#2c2b29",
   },
-  badgeRow: {
+  badgesContainer: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
   timeBadge: {
     flexDirection: "row",
@@ -323,28 +406,28 @@ const styles = StyleSheet.create({
     backgroundColor: "#69923e",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    padding: 28,
-    paddingBottom: 48,
+    padding: 20,
+    paddingBottom: 24,
     gap: 4,
   },
   playerBox: {
-    borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     alignItems: "center",
   },
-  playerBoxLight: { backgroundColor: "white", borderRadius: 18 },
-  playerBoxDark: { backgroundColor: "#4b4847", borderRadius: 18 },
+  playerBoxLight: { backgroundColor: "white", borderRadius: 16 },
+  playerBoxDark: { backgroundColor: "#4b4847", borderRadius: 16 },
   playerRole: {
     fontFamily: "GoogleSansFlex_400Regular",
-    fontSize: 12,
-    marginBottom: 4,
+    fontSize: 11,
+    marginBottom: 2,
   },
   playerRoleLight: { color: "rgba(26,26,26,0.5)" },
   playerRoleDark: { color: "rgba(255,255,255,0.5)" },
   playerName: {
     fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 18,
+    fontSize: 16,
   },
   playerNameLight: { color: "#1a1a1a" },
   playerNameDark: { color: "white" },
@@ -368,8 +451,8 @@ const styles = StyleSheet.create({
   startBtn: {
     marginTop: "auto",
     backgroundColor: "white",
-    borderRadius: 18,
-    paddingVertical: 18,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: "center",
   },
   startBtnText: {
@@ -380,23 +463,95 @@ const styles = StyleSheet.create({
   codeBox: {
     marginTop: "auto",
     backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 18,
-    padding: 20,
-    alignItems: "center",
-    gap: 8,
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
   },
-  codeLabel: {
+  shareHeader: {
     fontFamily: "GoogleSansFlex_500Medium",
-    fontSize: 13,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
+    marginBottom: 4,
+    alignSelf: "flex-start",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 12,
+    padding: 12,
+    width: "100%",
+  },
+  infoContent: {
+    alignItems: "center",
+  },
+  infoLabel: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 11,
     color: "rgba(255,255,255,0.6)",
     textTransform: "uppercase",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
+    marginBottom: 4,
   },
-  codeText: {
-    fontFamily: "ArchivoBlack_400Regular",
-    fontSize: 34,
+  infoValue: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 20,
     color: "white",
-    letterSpacing: 8,
+    letterSpacing: 2,
+  },
+  ipError: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 13,
+    color: "rgba(255,107,107,0.9)",
+  },
+  ipMismatchWarning: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 4,
+  },
+  ipMismatchText: {
+    flex: 1,
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.8)",
+    lineHeight: 15,
+  },
+  hotspotWarningBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.3)",
+  },
+  hotspotWarningText: {
+    flex: 1,
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.95)",
+    lineHeight: 15,
+  },
+  hotspotActiveBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
+    borderRadius: 10,
+    padding: 8,
+    justifyContent: "center",
+  },
+  hotspotActiveText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 11,
+    color: "#10b981",
   },
   waitingRow: {
     flexDirection: "row",

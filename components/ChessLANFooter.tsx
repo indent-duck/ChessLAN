@@ -1,9 +1,13 @@
 import { View, Text, StyleSheet } from "react-native";
 
-export default function ChessLANFooter() {
+interface ChessLANFooterProps {
+  version?: string;
+}
+
+export default function ChessLANFooter({ version = "1.0.2" }: ChessLANFooterProps) {
   return (
     <View style={styles.footer}>
-      <Text style={styles.footerText}>ChessLAN v1.0.0</Text>
+      <Text style={styles.footerText}>ChessLAN v{version}</Text>
     </View>
   );
 }

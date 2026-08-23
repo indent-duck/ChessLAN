@@ -2,14 +2,9 @@ import {
   View,
   Text,
   StyleSheet,
-  useWindowDimensions,
-  FlatList,
-  Animated,
   TextInput,
   Pressable,
   Modal,
-  Alert,
-  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRef, useState, useCallback, useEffect } from "react";
@@ -18,74 +13,19 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialIcons } from "@expo/vector-icons";
 import Rook from "../assets/svg/rookProfile.svg";
-import Rapid from "../assets/svg/rapid.svg";
-import Card from "../components/GameCard";
-import King from "../assets/svg/king.svg";
-import Queen from "../assets/svg/queen.svg";
-import Chessboard from "../assets/svg/chessboard.svg";
-import { getServerUrl, setServerUrl } from "../config";
 import ChessLANFooter from "../components/ChessLANFooter";
-import BoardPreview from "../components/BoardPreview";
-
-const CARD_WIDTH = 260;
-const CARD_GAP = 16;
-
-const gameModes = [
-  { id: "rapid", icon: Rapid, title: "Rapid", time: "10 min" },
-  { id: "blitz", icon: King, title: "Blitz", time: "5 min" },
-  { id: "bullet", icon: Queen, title: "Bullet", time: "1 min" },
-  { id: "custom", icon: Chessboard, title: "Custom", time: "custom time" },
-];
 
 export default function Home() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
-  const { width } = useWindowDimensions();
-  const iconSize = width * 0.11;
-  const snapInterval = CARD_WIDTH + CARD_GAP;
-  const [activeIndex, setActiveIndex] = useState(0);
-  const scaleAnims = useRef(
-    gameModes.map((_, i) => new Animated.Value(i === 0 ? 1 : 0.88)),
-  ).current;
-  const opacityAnims = useRef(
-    gameModes.map((_, i) => new Animated.Value(i === 0 ? 1 : 0.5)),
-  ).current;
   const [username, setUsername] = useState("username");
   const [editing, setEditing] = useState(false);
-  const [settingsVisible, setSettingsVisible] = useState(false);
   const [aboutVisible, setAboutVisible] = useState(false);
-  const [serverUrl, setServerUrlState] = useState("");
-  const [tempServerUrl, setTempServerUrl] = useState("");
+  const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     AsyncStorage.getItem("Player").then((val) => {
       if (val) setUsername(val);
     });
-    getServerUrl().then((url) => {
-      setServerUrlState(url);
-      setTempServerUrl(url);
-    });
-  }, []);
-  const inputRef = useRef<TextInput>(null);
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 });
-  const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
-      const newIndex = viewableItems[0].index;
-      setActiveIndex(newIndex);
-      gameModes.forEach((_, i) => {
-        Animated.spring(scaleAnims[i], {
-          toValue: i === newIndex ? 1 : 0.88,
-          useNativeDriver: true,
-          damping: 12,
-          stiffness: 180,
-        }).start();
-        Animated.spring(opacityAnims[i], {
-          toValue: i === newIndex ? 1 : 0.5,
-          useNativeDriver: true,
-          damping: 12,
-          stiffness: 180,
-        }).start();
-      });
-    }
   }, []);
 
   useFocusEffect(
@@ -99,39 +39,13 @@ export default function Home() {
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  const handleSaveServerUrl = async () => {
-    if (!tempServerUrl.trim()) {
-      Alert.alert("Invalid URL", "Server URL cannot be empty");
-      return;
-    }
-    if (
-      !tempServerUrl.startsWith("ws://") &&
-      !tempServerUrl.startsWith("wss://")
-    ) {
-      Alert.alert("Invalid URL", "Server URL must start with ws:// or wss://");
-      return;
-    }
-    await setServerUrl(tempServerUrl);
-    setServerUrlState(tempServerUrl);
-    setSettingsVisible(false);
-    Alert.alert(
-      "Success",
-      "Server URL updated. New connections will use this address.",
-    );
-  };
-
-  const handleCancelSettings = () => {
-    setTempServerUrl(serverUrl);
-    setSettingsVisible(false);
-  };
-
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.headerRow}>
           <View style={styles.avatar}>
-            <Rook width={iconSize} height={iconSize} />
+            <Rook width={56} height={56} />
           </View>
           <View style={styles.userInfo}>
             <View style={styles.usernameRow}>
@@ -164,7 +78,7 @@ export default function Home() {
                 <MaterialIcons
                   name={editing ? "check" : "edit"}
                   size={16}
-                  color={editing ? "#69923e" : "#777"}
+                  color={editing ? "#1e6b40" : "#777"}
                 />
               </Pressable>
             </View>
@@ -176,213 +90,72 @@ export default function Home() {
           >
             <MaterialIcons name="info-outline" size={22} color="#777" />
           </Pressable>
-          <Pressable
-            onPress={() => setSettingsVisible(true)}
-            style={styles.settingsBtn}
-            hitSlop={8}
-          >
-            <MaterialIcons name="settings" size={22} color="#777" />
-          </Pressable>
         </View>
 
         {/* Middle area */}
         <View style={styles.heroArea}>
           <Text style={styles.heroTitle}>ChessLAN ♟</Text>
-          <Text style={styles.heroSubtitle}>Ready for a match?</Text>
+          <Text style={styles.heroSubtitle}>
+            Play chess with friends over local WiFi or hotspot
+          </Text>
         </View>
       </View>
 
-      {/* Play panel */}
-      <View style={styles.startGameContainer}>
+      {/* Mode Selection Panel */}
+      <View style={styles.modeSelectionContainer}>
         <View style={styles.selectHeader}>
-          <Text style={styles.selectHeaderText}>Select Game Mode</Text>
+          <Text style={styles.selectHeaderText}>Choose Connection Type</Text>
           <Text style={styles.selectHeaderSub}>
-            {gameModes[activeIndex].time} per side
+            Select how you want to connect with your opponent
           </Text>
         </View>
 
-        {/* Carousel and Host Button grouped together */}
-        <View style={styles.carouselHostGroup}>
-          <View style={{ overflow: "visible" }}>
-            <FlatList
-              data={gameModes}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={snapInterval}
-              decelerationRate="fast"
-              contentContainerStyle={{
-                paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_GAP / 2,
-                paddingVertical: 12,
-                gap: CARD_GAP,
-              }}
-              renderItem={({ item, index }) => (
-                <Animated.View
-                  style={{
-                    transform: [{ scale: scaleAnims[index] }],
-                    opacity: opacityAnims[index],
-                  }}
-                >
-                  <Card
-                    icon={item.icon}
-                    title={item.title}
-                    time={item.time}
-                    username={username}
-                  />
-                </Animated.View>
-              )}
-              onViewableItemsChanged={onViewableItemsChanged}
-              viewabilityConfig={viewabilityConfig.current}
-            />
-            {/* Dot indicators */}
-            <View style={styles.dots}>
-              {gameModes.map((_, i) => (
-                <View
-                  key={i}
-                  style={[styles.dot, i === activeIndex && styles.dotActive]}
-                />
-              ))}
-            </View>
-          </View>
-
-          {/* Host Button inside the group */}
+        <View style={styles.modesGroup}>
           <Pressable
             style={({ pressed }) => [
-              styles.hostBtn,
+              styles.modeButton,
               { opacity: pressed ? 0.85 : 1 },
             ]}
-            onPress={() => {
-              const selectedMode = gameModes[activeIndex];
-              if (selectedMode.id === "custom") {
-                // For custom, go to CustomTime screen for configuration
-                navigation.navigate("CustomTime", { username });
-              } else {
-                // For standard modes, go directly to HostGame with standard variant
-                navigation.navigate("HostGame", {
-                  mode: selectedMode.title,
-                  time: selectedMode.time,
-                  username,
-                  variant: "standard",
-                });
-              }
-            }}
+            onPress={() => navigation.navigate("HomeWiFi" as never)}
           >
-            <View style={styles.actionBtnContent}>
-              <MaterialIcons name="wifi-tethering" size={20} color="white" />
-              <Text style={styles.hostBtnText}>
-                Host {gameModes[activeIndex].title} Game
-              </Text>
+            <View style={styles.modeButtonLeft}>
+              <View style={styles.modeIconContainer}>
+                <MaterialIcons name="wifi" size={24} color="#69923e" />
+              </View>
+              <View style={styles.modeTextContainer}>
+                <Text style={styles.modeButtonTitle}>WiFi Network</Text>
+                <Text style={styles.modeButtonSubtitle}>
+                  Connect via same WiFi router
+                </Text>
+              </View>
             </View>
-            <MaterialIcons
-              name="chevron-right"
-              size={20}
-              color="rgba(255,255,255,0.8)"
-            />
+            <MaterialIcons name="chevron-right" size={24} color="#69923e" />
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.modeButton,
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
+            onPress={() => navigation.navigate("HomeHotspot" as never)}
+          >
+            <View style={styles.modeButtonLeft}>
+              <View style={styles.modeIconContainer}>
+                <MaterialIcons name="settings-input-antenna" size={24} color="#69923e" />
+              </View>
+              <View style={styles.modeTextContainer}>
+                <Text style={styles.modeButtonTitle}>Phone Hotspot</Text>
+                <Text style={styles.modeButtonSubtitle}>
+                  Host creates hotspot connection
+                </Text>
+              </View>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#69923e" />
           </Pressable>
         </View>
-
-        {/* Join Button - separate from carousel */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.joinBtn,
-            { opacity: pressed ? 0.85 : 1 },
-          ]}
-          onPress={() => navigation.navigate("JoinGame", { username })}
-        >
-          <View style={styles.actionBtnContent}>
-            <MaterialIcons name="login" size={20} color="#69923e" />
-            <Text style={styles.joinBtnText}>Join with Room Code</Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={20} color="#69923e" />
-        </Pressable>
       </View>
 
-      <ChessLANFooter />
-
-      {/* Settings Modal */}
-      <Modal visible={settingsVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Server Settings</Text>
-              <Pressable onPress={handleCancelSettings} hitSlop={8}>
-                <MaterialIcons name="close" size={24} color="#2c2b29" />
-              </Pressable>
-            </View>
-            <ScrollView
-              style={styles.modalContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <Text style={styles.settingsLabel}>WebSocket Server URL</Text>
-              <Text style={styles.settingsHint}>
-                Enter your server's IP address and port
-              </Text>
-              <TextInput
-                style={styles.serverInput}
-                value={tempServerUrl}
-                onChangeText={setTempServerUrl}
-                placeholder="ws://192.168.x.x:3001"
-                placeholderTextColor="#999"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
-
-              <View style={styles.instructionsBox}>
-                <View style={styles.instructionHeader}>
-                  <MaterialIcons
-                    name="info-outline"
-                    size={18}
-                    color="#69923e"
-                  />
-                  <Text style={styles.instructionTitle}>
-                    Where to find the IP
-                  </Text>
-                </View>
-                <View style={styles.instructionSteps}>
-                  <Text style={styles.instructionStep}>
-                    <Text style={styles.instructionStepBold}>Ask the host</Text>{" "}
-                    for their server IP address
-                  </Text>
-                  <Text style={styles.instructionStep}>
-                    <Text style={styles.instructionStepBold}>
-                      Host can find it:
-                    </Text>
-                    {"\n"}
-                    Settings → Wi-Fi → Tap your network{"\n"}
-                    Look for "IP Address" (192.168.x.x)
-                  </Text>
-                  <Text style={styles.instructionStep}>
-                    <Text style={styles.instructionStepBold}>Format:</Text>{" "}
-                    ws://[IP]:3001{"\n"}
-                    Example: ws://192.168.1.100:3001
-                  </Text>
-                </View>
-                <View style={styles.instructionNote}>
-                  <Text style={styles.instructionNoteText}>
-                    Both players must be on the same WiFi
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.settingsBtns}>
-                <Pressable
-                  style={styles.cancelBtn}
-                  onPress={handleCancelSettings}
-                >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </Pressable>
-                <Pressable style={styles.saveBtn} onPress={handleSaveServerUrl}>
-                  <Text style={styles.saveBtnText}>Save</Text>
-                </Pressable>
-              </View>
-
-              {/* Board Preview Button */}
-              <BoardPreview />
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      <ChessLANFooter version="1.0.2" />
 
       {/* About Modal */}
       <Modal visible={aboutVisible} transparent animationType="fade">
@@ -395,10 +168,10 @@ export default function Home() {
             onPress={(e) => e.stopPropagation()}
           >
             <View style={styles.aboutHeader}>
-              <MaterialIcons name="info" size={48} color="#69923e" />
+              <MaterialIcons name="info" size={48} color="#1e6b40" />
             </View>
             <Text style={styles.aboutTitle}>ChessLAN</Text>
-            <Text style={styles.aboutVersion}>Version 1.0.0</Text>
+            <Text style={styles.aboutVersion}>Version 1.0.2</Text>
             <View style={styles.aboutDivider} />
             <Text style={styles.aboutLabel}>Created by</Text>
             <Text style={styles.aboutCreator}>Lee Johnrich H. Ramirez</Text>
@@ -407,7 +180,7 @@ export default function Home() {
               Cavite State University - Main
             </Text>
             <Text style={styles.aboutDescription}>
-              Play chess anytime, anywhere with friends over local WiFi.
+              Play chess anytime, anywhere with friends over local WiFi or phone hotspot.
             </Text>
           </Pressable>
         </Pressable>
@@ -423,8 +196,8 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: 24,
+    paddingTop: 16,
   },
   headerRow: {
     flexDirection: "row",
@@ -432,9 +205,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: "#ddeacc",
     alignItems: "center",
     justifyContent: "center",
@@ -449,46 +222,48 @@ const styles = StyleSheet.create({
   },
   username: {
     fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 16,
+    fontSize: 18,
     color: "#2c2b29",
   },
   usernameInput: {
     fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 16,
+    fontSize: 18,
     color: "#2c2b29",
-    borderBottomWidth: 1.5,
-    borderBottomColor: "#69923e",
+    borderBottomWidth: 2,
+    borderBottomColor: "#1e6b40",
     paddingVertical: 0,
-    minWidth: 80,
+    minWidth: 100,
   },
   heroArea: {
     flex: 1,
     justifyContent: "center",
+    paddingBottom: 20,
   },
   heroTitle: {
     fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 28,
+    fontSize: 48,
     color: "#2c2b29",
+    marginBottom: 12,
   },
   heroSubtitle: {
     fontFamily: "GoogleSansFlex_400Regular",
-    fontSize: 15,
+    fontSize: 16,
     color: "#666",
-    marginTop: 4,
+    lineHeight: 24,
+    maxWidth: "90%",
   },
-  startGameContainer: {
+  modeSelectionContainer: {
     backgroundColor: "#69923e",
     marginTop: "auto",
-    paddingTop: 20,
-    paddingBottom: 24,
+    paddingTop: 32,
+    paddingBottom: 28,
+    paddingHorizontal: 20,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    minHeight: "62%",
+    minHeight: "50%",
   },
   selectHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    marginBottom: 8,
+    marginBottom: 20,
   },
   selectHeaderText: {
     color: "white",
@@ -496,35 +271,50 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   selectHeaderSub: {
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.7)",
     fontFamily: "GoogleSansFlex_400Regular",
     fontSize: 13,
-    marginTop: 2,
+    marginTop: 4,
   },
-  dots: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 16,
+  modesGroup: {
+    gap: 12,
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.3)",
-  },
-  dotActive: {
-    width: 20,
+  modeButton: {
     backgroundColor: "white",
+    borderRadius: 16,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  settingsBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f5f5f0",
+  modeButtonLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    flex: 1,
+  },
+  modeIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#ddeacc",
     alignItems: "center",
     justifyContent: "center",
+  },
+  modeTextContainer: {
+    flex: 1,
+  },
+  modeButtonTitle: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 16,
+    color: "#2c2b29",
+    marginBottom: 2,
+  },
+  modeButtonSubtitle: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 13,
+    color: "#666",
+    lineHeight: 18,
   },
   aboutBtn: {
     width: 40,
@@ -533,133 +323,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f0",
     alignItems: "center",
     justifyContent: "center",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  modalBox: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 32,
-    height: "85%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  modalTitle: {
-    fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 20,
-    color: "#2c2b29",
-  },
-  modalContent: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 24,
-  },
-  settingsLabel: {
-    fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 14,
-    color: "#2c2b29",
-    marginBottom: 4,
-  },
-  settingsHint: {
-    fontFamily: "GoogleSansFlex_400Regular",
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 4,
-  },
-  serverInput: {
-    fontFamily: "GoogleSansFlex_500Medium",
-    fontSize: 15,
-    color: "#2c2b29",
-    backgroundColor: "#f5f5f0",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  settingsBtns: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 16,
-  },
-  cancelBtn: {
-    flex: 1,
-    backgroundColor: "#e0e0e0",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  cancelBtnText: {
-    fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 15,
-    color: "#666",
-  },
-  saveBtn: {
-    flex: 1,
-    backgroundColor: "#69923e",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  saveBtnText: {
-    fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 15,
-    color: "#ffffff",
-  },
-  instructionsBox: {
-    backgroundColor: "#f5f5f0",
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-    gap: 12,
-  },
-  instructionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  instructionTitle: {
-    fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 14,
-    color: "#2c2b29",
-  },
-  instructionSteps: {
-    gap: 10,
-  },
-  instructionStep: {
-    fontFamily: "GoogleSansFlex_400Regular",
-    fontSize: 13,
-    color: "#444",
-    lineHeight: 18,
-  },
-  instructionStepBold: {
-    fontFamily: "GoogleSansFlex_700Bold",
-    color: "#2c2b29",
-  },
-  instructionNote: {
-    backgroundColor: "#ddeacc",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 4,
-  },
-  instructionNoteText: {
-    fontFamily: "GoogleSansFlex_500Medium",
-    fontSize: 12,
-    color: "#69923e",
-    lineHeight: 17,
   },
   aboutModalOverlay: {
     flex: 1,
@@ -710,7 +373,7 @@ const styles = StyleSheet.create({
   aboutCreator: {
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 20,
-    color: "#69923e",
+    color: "#1e6b40",
     marginBottom: 8,
   },
   aboutProgram: {
@@ -728,49 +391,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 4,
-  },
-  carouselHostGroup: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-    marginHorizontal: 12,
-    marginBottom: 12,
-  },
-  hostBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(255,255,255,0.15)",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginTop: 8,
-  },
-  joinBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "white",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
-    marginHorizontal: 20,
-  },
-  actionBtnContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  hostBtnText: {
-    fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 15,
-    color: "white",
-  },
-  joinBtnText: {
-    fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 15,
-    color: "#69923e",
   },
 });

@@ -76,7 +76,7 @@ export default function JoinGame() {
         duration: 220,
         useNativeDriver: true,
       }),
-    ]).start(() => navigation.navigate("Home" as never));
+    ]).start(() => navigation.goBack());
   };
 
   const handleJoin = async () => {
@@ -143,8 +143,8 @@ export default function JoinGame() {
         remove();
         setJoining(false);
         setJoined(false);
-        // Navigate to home when room is closed by host
-        navigation.navigate("Home" as never);
+        // Navigate back when room is closed by host
+        navigation.goBack();
       }
     });
     

@@ -2,7 +2,7 @@
 
 A React Native chess app for **true local network multiplayer** - play chess with a friend over WiFi without needing internet or an external server!
 
-![Version](https://img.shields.io/badge/version-1.0.1-blue)
+![Version](https://img.shields.io/badge/version-1.0.2-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
@@ -21,38 +21,59 @@ A React Native chess app for **true local network multiplayer** - play chess wit
 ### Local Network Multiplayer
 
 - **2-phone gameplay** - no laptop or cloud server needed
-- **100% local** - works over WiFi without internet
+- **Dual connection modes:** WiFi Network or Phone Hotspot
+- **100% local** - works over WiFi or hotspot without internet
 - **Privacy first** - no data leaves your network
 - **Low latency** - direct device-to-device communication
 - **Free hosting** - no server costs
+- **Automatic IP display** - host's IP shown automatically
+- **Simplified setup** - just enter IP numbers, no complex URLs
 
 ### User Experience
 
 - **Clean, modern UI** with smooth animations
 - **Custom usernames**
-- **Easy setup** - just enter host's IP once
+- **Connection mode selection** - choose WiFi or Hotspot
+- **Easy setup** - IP displayed automatically for host
+- **Simple IP entry** - just numbers, no complex URLs
 - **Simple room codes** - 4 characters to join
 - **Real-time sync** - moves appear instantly
 - **Move history** with scrollable list
 
 ## How It Works
 
+### WiFi Network Mode
 ```
 ┌─────────────────────┐         ┌─────────────────────┐
 │   Host Phone        │         │   Guest Phone       │
 │                     │         │                     │
 │  TCP Server :3001   │◄───────►│  TCP Client         │
 │  Room Code: AB12    │  WiFi   │  Connects to Host IP│
-│                     │         │                     │
+│  IP: 192.168.1.100  │         │                     │
 └─────────────────────┘         └─────────────────────┘
 ```
 
-1. Host opens app and creates a game
-2. Host phone starts a TCP server on port 3001
-3. Host shares 4-character room code
-4. Guest enters host's IP address in settings (one-time setup)
-5. Guest joins using the room code
-6. Both players see each other and play in real-time
+### Phone Hotspot Mode
+```
+┌─────────────────────┐         ┌─────────────────────┐
+│   Host Phone        │         │   Guest Phone       │
+│                     │         │                     │
+│  Hotspot Active     │◄───────►│  Connected to       │
+│  TCP Server :3001   │ Hotspot │  Host's Hotspot     │
+│  Room Code: AB12    │         │                     │
+│  IP: 192.168.43.1   │         │                     │
+└─────────────────────┘         └─────────────────────┘
+```
+
+**Setup Steps:**
+
+1. Host opens app and selects connection mode (WiFi or Hotspot)
+2. Host creates a game and starts TCP server on port 3001
+3. Host shares room code and IP address (displayed automatically)
+4. Guest selects same connection mode
+5. Guest enters host's IP in simple format (e.g., 192.168.1.100)
+6. Guest joins using the room code
+7. Both players see each other and play in real-time
 
 ## Tech Stack
 
@@ -104,14 +125,26 @@ eas build --platform ios --profile preview
 
 ### For Players
 
-**Quick Start:**
+**Quick Start (WiFi Network Mode):**
 
 1. Install ChessLAN on 2 phones
-2. Connect both to same WiFi
-3. Host creates game, gets room code
-4. Guest enters host's IP in Settings
-5. Guest joins with room code
-6. Play chess
+2. Connect both to same WiFi network
+3. Both select "Same WiFi Network" mode
+4. Host creates game, sees room code and IP
+5. Guest configures host's IP (just the numbers)
+6. Guest joins with room code
+7. Play chess
+
+**Quick Start (Hotspot Mode):**
+
+1. Install ChessLAN on 2 phones
+2. Host turns on phone hotspot
+3. Guest connects to host's hotspot in phone settings
+4. Both select "Phone Hotspot" mode
+5. Host creates game, sees room code and IP
+6. Guest configures host's hotspot IP (usually 192.168.43.1 or 172.20.10.1)
+7. Guest joins with room code
+8. Play chess
 
 ### For Developers
 
@@ -119,9 +152,14 @@ See [PROJECT.md](PROJECT.md) for architecture details.
 
 **Key Files:**
 
+- `screens/ConnectionTypeSelect.tsx` - Connection mode selection
+- `screens/HomeWiFi.tsx` - WiFi mode lobby
+- `screens/HomeHotspot.tsx` - Hotspot mode lobby
+- `components/IPConfigModal.tsx` - IP configuration modal
+- `utils/networkUtils.ts` - Network utility functions
 - `hooks/useLocalServer.ts` - Embedded TCP server (host)
 - `hooks/useLocalClient.ts` - TCP client (guest)
-- `screens/HostGame.tsx` - Host game creation
+- `screens/HostGame.tsx` - Host game creation with IP display
 - `screens/JoinGame.tsx` - Guest game joining
 - `screens/GameRoom.tsx` - Chess gameplay
 
@@ -204,7 +242,7 @@ ChessLAN/
 
 ## Roadmap
 
-### v1.1 (Planned)
+### v1.2 (Planned)
 
 - UDP broadcast for auto host discovery
 - Reconnection handling
@@ -231,10 +269,9 @@ Contributions welcome! Please:
 
 ## Known Limitations
 
-- **Manual IP Configuration:** Guest must enter host's IP address
-- **Same Network Required:** Both phones must be on same WiFi
 - **No Reconnection:** Connection loss ends the game
 - **Host Dependency:** If host quits, game ends
+- **IPv6 Not Supported:** Only IPv4 addresses work (filtered automatically)
 
 These are inherent to the peer-to-peer architecture and prioritize privacy/local play.
 
@@ -242,10 +279,19 @@ These are inherent to the peer-to-peer architecture and prioritize privacy/local
 
 ### "Failed to connect to host"
 
-- Ensure both phones on same WiFi network
-- Verify host's IP address is correct (format: `ws://192.168.x.x:3001`)
+- Ensure both phones selected the same connection mode
+- **WiFi Mode:** Both phones must be on same WiFi network
+- **Hotspot Mode:** Guest must be connected to host's hotspot
+- Verify host's IP address is correct (format: 192.168.1.100)
 - Check firewall not blocking port 3001
 - Ensure host has started hosting before guest tries to join
+
+### "Unable to detect IP" on Host Screen
+
+- Check your network connection
+- The app filters out IPv6 addresses (starting with 2001:, fe80:, etc.)
+- Make sure you're connected to WiFi or have hotspot enabled
+- Try toggling WiFi/hotspot off and on
 
 ### "Room not found"
 

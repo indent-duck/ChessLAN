@@ -26,9 +26,16 @@ A React Native (Expo ~54) mobile chess app for **true local network multiplayer*
 
 ## Navigation Flow
 ```
-Home → SelectMode → HostGame → GameRoom
-                  → JoinGame → GameRoom
-       CustomTime → SelectMode (for custom time only)
+Home (username setup only)
+  ↓
+ConnectionTypeSelect (WiFi or Hotspot choice)
+  ↓                              ↓
+HomeWiFi                    HomeHotspot
+(WiFi mode lobby)           (Hotspot mode lobby)
+  ↓                              ↓
+SelectMode → HostGame → GameRoom
+           → JoinGame → GameRoom
+CustomTime → SelectMode (for custom time only)
 ```
 - Home: username input (editable inline), horizontal scrollable card carousel to pick game mode, Settings and About buttons
 - SelectMode: choose variant (Standard/Chess960) and start hosting
@@ -40,13 +47,52 @@ Home → SelectMode → HostGame → GameRoom
 ## Screen-by-screen notes
 
 ### Home (`screens/Home.tsx`)
+- **Simplified entry point** - Username setup and About button only
 - Username stored in AsyncStorage, editable with inline TextInput + check/edit icon
-- Game modes: Rapid (10 min), Blitz (5 min), Bullet (1 min), Custom
+- Large "Play Multiplayer" button navigates to ConnectionTypeSelect
+- Footer shows "ChessLAN v1.0.2"
+- No game mode selection here (moved to HomeWiFi/HomeHotspot)
+
+### ConnectionTypeSelect (`screens/ConnectionTypeSelect.tsx`)
+- **New screen** - Choose between WiFi Network or Phone Hotspot
+- Two large selection cards with icons and descriptions
+- WiFi Network: "Both players connect to the same WiFi network"
+- Phone Hotspot: "Host creates hotspot, guest connects to it"
+- Slide-up animation on mount
+- Back button returns to Home
+
+### HomeWiFi (`screens/HomeWiFi.tsx`)
+- **WiFi mode multiplayer lobby** - Shows "WiFi Network Mode" banner
+- Game mode carousel (Rapid, Blitz, Bullet, Custom) - unchanged from old Home
 - FlatList carousel with snap, scale + opacity spring animations on active card
 - Dot indicators below carousel
-- **Settings button** - Configure host IP for guest connections
-- **About button** - Shows modal with creator credits (Lee Johnrich H. Ramirez, CvSU)
-- Footer shows "ChessLAN v1.0.0"
+- **Guest section:**
+  - IP status display (configured with checkmark or warning)
+  - "Configure Host IP" button opens IPConfigModal
+  - "Join with Room Code" button navigates to JoinGame
+- **Host section:**
+  - "Host [Mode] Game" button navigates to SelectMode or CustomTime
+- Separate IP storage from Hotspot mode (`WIFI_SERVER_IP`)
+- Sets connection mode to 'wifi' on mount
+- Back button returns to ConnectionTypeSelect
+
+### HomeHotspot (`screens/HomeHotspot.tsx`)
+- **Hotspot mode multiplayer lobby** - Shows "Hotspot Mode" banner
+- Hotspot instructions box with emoji icon
+- Same carousel and layout as HomeWiFi
+- Separate IP storage from WiFi mode (`HOTSPOT_SERVER_IP`)
+- Sets connection mode to 'hotspot' on mount
+- Back button returns to ConnectionTypeSelect
+
+### IPConfigModal (`components/IPConfigModal.tsx`)
+- **Modal for IP configuration** - Slides up from bottom
+- Simple IP input (just numbers: 192.168.1.100)
+- Real-time format validation (xxx.xxx.xxx.xxx, 0-255 per octet)
+- Shows network connection status (WiFi/Hotspot/None)
+- Pre-fills with last saved IP for current mode
+- Shows "Last saved" IP at bottom with restore option
+- Success animation (green checkmark) on save
+- Auto-closes after successful save
 
 ### SelectMode (`screens/SelectMode.tsx`)
 - Receives `mode`, `time`, `username` as route params
@@ -60,10 +106,15 @@ Home → SelectMode → HostGame → GameRoom
 ### HostGame (`screens/HostGame.tsx`)
 - Receives `mode`, `time`, `username`, `variant` (standard or chess960)
 - **Starts embedded TCP server** on port 3001 using `useLocalServer` hook
+- **Displays host's IPv4 address** with copy button (filters out IPv6)
 - **Chess960 FEN generation:** If variant is chess960, generates random starting position
 - Generates 4-character room code automatically
+- **Share section:**  
+  - Room Code with copy button
+  - Your IP with copy button  
+  - Hint: "Share both to your opponent"
 - `flipped` state toggles which color the host plays
-- Displays room code and waits for guest to join
+- Waits for guest to join
 - Shows opponent username when guest connects
 - Shows Chess960 badge if variant is chess960
 - Start Game navigates to GameRoom with `{ mode, time, username, flipped, variant, chess960Fen, isHost: true }`
@@ -73,7 +124,7 @@ Home → SelectMode → HostGame → GameRoom
 - Receives `username`
 - **Connects to host phone** via TCP using `useLocalClient` hook
 - 4-char uppercase room code input
-- Reads host IP from Settings (ws://192.168.x.x:3001)
+- Uses IP from current connection mode (WiFi or Hotspot) configured via modal
 - Join button disabled until 4 chars entered
 - Shows error feedback for invalid codes or connection failures
 - Receives game info from host (mode, time, variant)
@@ -108,7 +159,7 @@ Home → SelectMode → HostGame → GameRoom
 - "Play Now" → navigates to CustomTime (if Custom) or SelectMode
 
 ## What's NOT done yet
-- UDP broadcasting for automatic host discovery (currently requires manual IP entry)
+- Auto-detection of host IP for guests (currently manual entry via modal)
 - Reconnection handling if connection drops mid-game
 - Move sound effects
 - Vibration on captures
@@ -119,6 +170,7 @@ Home → SelectMode → HostGame → GameRoom
 {
   "react-native-tcp-socket": "^6.0.6",
   "react-native-udp": "^4.1.7",
+  "expo-network": "~8.0.0",
   "expo-splash-screen": "~31.0.13",
   "chess.js": "^1.4.0",
   "@react-native-async-storage/async-storage": "2.2.0",
@@ -130,6 +182,13 @@ Home → SelectMode → HostGame → GameRoom
 ## What IS done
 - Embedded TCP server runs on host phone (port 3001)
 - Guest connects to host via TCP socket
+- **Dual connection modes:** WiFi Network and Phone Hotspot
+- **Connection mode selection screen** with clear descriptions
+- **Automatic IPv4 detection and display** on host screen
+- **IPv6 filtering** - only shows IPv4 addresses
+- **Simplified IP configuration** via modal (no ws:// or :3001 required)
+- **Mode-specific IP storage** - separate for WiFi and Hotspot
+- **IP status indicators** on home screens
 - Room code generation (4 characters) and validation
 - Opponent discovery and connection status
 - Color selection sync between devices
@@ -140,13 +199,12 @@ Home → SelectMode → HostGame → GameRoom
 - **Resign, draw offers, draw accept/decline** synchronized
 - **Game over states** (checkmate, timeout, resignation, draw) synchronized
 - Full chess UI with legal moves, captures, timers
-- Settings panel for configuring host IP address
 - Connection error handling and user feedback
 - About modal with creator credits (Lee Johnrich H. Ramirez, BS Information Technology, CvSU)
-- App renamed to ChessLAN (Local Area Network chess)
+- App updated to ChessLAN v1.0.2
 - Splash screen with expo-splash-screen integration
 - Loading states and connection status indicators
-- **Complete local WiFi multiplayer** - no external server needed
+- **Complete local WiFi or Hotspot multiplayer** - no external server needed
 
 ## Testing
 

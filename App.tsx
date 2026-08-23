@@ -6,6 +6,8 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import SelectMode from "./screens/SelectMode";
 import Home from "./screens/Home";
+import HomeWiFi from "./screens/HomeWiFi";
+import HomeHotspot from "./screens/HomeHotspot";
 import HostGame from "./screens/HostGame";
 import JoinGame from "./screens/JoinGame";
 import GameRoom from "./screens/GameRoom";
@@ -31,6 +33,16 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen 
+          name="HomeWiFi" 
+          component={HomeWiFi} 
+          options={{ animation: "slide_from_right" }} 
+        />
+        <Stack.Screen 
+          name="HomeHotspot" 
+          component={HomeHotspot} 
+          options={{ animation: "slide_from_right" }} 
+        />
         <Stack.Screen
           name="SelectMode"
           component={SelectMode}
