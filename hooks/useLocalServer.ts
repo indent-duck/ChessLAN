@@ -23,9 +23,20 @@ let currentRoom: GameRoom | null = null;
 const clients: Map<string, ClientConnection> = new Map();
 const moveListeners: Set<(msg: any) => void> = new Set();
 
+// Tracks a pending (scheduled) server start so it can be cancelled
+let pendingStartTimer: ReturnType<typeof setTimeout> | null = null;
+let serverPending = false;
+
 // Global cleanup function that can be called from anywhere
 const globalForceCleanup = () => {
   console.log('[LocalServer] Global force cleanup initiated');
+  
+  // Cancel any pending server start
+  if (pendingStartTimer) {
+    clearTimeout(pendingStartTimer);
+    pendingStartTimer = null;
+  }
+  serverPending = false;
   
   // Close all client connections
   clients.forEach((client) => {
@@ -202,6 +213,13 @@ export function useLocalServer() {
   const stopServer = () => {
     console.log('[LocalServer] Stopping server...');
     
+    // Cancel any pending server start
+    if (pendingStartTimer) {
+      clearTimeout(pendingStartTimer);
+      pendingStartTimer = null;
+    }
+    serverPending = false;
+    
     // Immediate synchronous cleanup first
     clients.forEach((client) => {
       try {
@@ -256,6 +274,12 @@ export function useLocalServer() {
     time: string;
     variant: string;
   }, retryCount = 0) => {
+    if (!serverPending) {
+      console.log('[LocalServer] attemptStartServer aborted - start was cancelled');
+      return;
+    }
+    pendingStartTimer = null;
+
     const code = generateRoomCode();
     const generatedChess960Fen = params.variant === 'chess960' ? generateChess960Fen() : undefined;
 
@@ -325,7 +349,13 @@ export function useLocalServer() {
             const delay = 800 * (retryCount + 1); // 800ms, 1600ms, 2400ms, 3200ms, 4000ms
             console.log(`[LocalServer] Retrying in ${delay}ms...`);
             
-            setTimeout(() => {
+            pendingStartTimer = setTimeout(() => {
+              if (!serverPending) {
+                console.log('[LocalServer] Retry aborted - server was stopped');
+                pendingStartTimer = null;
+                return;
+              }
+              pendingStartTimer = null;
               globalForceCleanup();
               attemptStartServer(params, retryCount + 1);
             }, delay);
@@ -383,7 +413,8 @@ export function useLocalServer() {
     setGuestUsername(null);
     
     // Wait for cleanup to complete, then start server
-    setTimeout(() => {
+    serverPending = true;
+    pendingStartTimer = setTimeout(() => {
       attemptStartServer(params, 0);
     }, 300);
   };

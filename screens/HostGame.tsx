@@ -259,7 +259,7 @@ export default function HostGame() {
               <View style={styles.hotspotWarningBox}>
                 <MaterialIcons name="wifi-tethering-off" size={18} color="#fbbf24" />
                 <Text style={styles.hotspotWarningText}>
-                  ⚠️ Hotspot may be OFF. Current IP: {deviceIP || 'unknown'}.
+                  Hotspot may be OFF. Current IP: {deviceIP || 'unknown'}.
                   {'\n'}Expected: {getDefaultHotspotIP()}
                 </Text>
               </View>
@@ -283,7 +283,7 @@ export default function HostGame() {
                 </View>
                 {/* IP Configuration Reminder */}
                 <View style={styles.ipReminderWrapper}>
-                  <IPConfigReminder variant="host" />
+                  <IPConfigReminder variant="host" mode={connectionMode} />
                 </View>
               </>
             )}

@@ -126,7 +126,7 @@ export default function CustomTime() {
           <View style={styles.infoBox}>
             <MaterialIcons name="info-outline" size={16} color="#ddeacc" />
             <Text style={styles.infoText}>
-              Configure your server IP in Home → Settings before hosting
+              Configure Host IP on the lobby screen before hosting
             </Text>
           </View>
 

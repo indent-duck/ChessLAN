@@ -165,6 +165,25 @@ export default function IPConfigModal({
                   <Text style={styles.infoExample}>Example: 192.168.1.100</Text>
                 </View>
 
+                {mode === "hotspot" && (
+                  <View style={styles.hotspotHintBox}>
+                    <Text style={styles.hotspotHintTitle}>
+                      Expected hotspot IP
+                    </Text>
+                    <Text style={styles.hotspotHintText}>
+                      {getDefaultHotspotIP()} (the host's gateway IP)
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.quickSetButton}
+                      onPress={() => setIpInput(getDefaultHotspotIP())}
+                    >
+                      <Text style={styles.quickSetText}>
+                        Quick-set {getDefaultHotspotIP()}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 <TouchableOpacity
                   style={[
                     styles.saveButton,
@@ -332,6 +351,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 16,
     padding: 16,
+    marginTop: 12,
     marginBottom: 24,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.3)",

@@ -8,7 +8,6 @@ import {
   TextInput,
   Pressable,
   Modal,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRef, useState, useCallback, useEffect } from "react";
@@ -22,11 +21,9 @@ import Card from "../components/GameCard";
 import King from "../assets/svg/king.svg";
 import Queen from "../assets/svg/queen.svg";
 import Chessboard from "../assets/svg/chessboard.svg";
-import { getServerIP, setServerIP, setConnectionMode } from "../config";
+import { setConnectionMode } from "../config";
 import ChessLANFooter from "../components/ChessLANFooter";
-import IPConfigModal from "../components/IPConfigModal";
 import InstructionsModal from "../components/InstructionsModal";
-import { getDeviceIPv4, isHotspotActive, getDefaultHotspotIP } from "../utils/networkUtils";
 
 const CARD_WIDTH = 260;
 const CARD_GAP = 16;
@@ -53,55 +50,20 @@ export default function HomeHotspot() {
   const [username, setUsername] = useState("username");
   const [editing, setEditing] = useState(false);
   const [aboutVisible, setAboutVisible] = useState(false);
-  const [configModalVisible, setConfigModalVisible] = useState(false);
   const [instructionsVisible, setInstructionsVisible] = useState(false);
-  const [hostIP, setHostIP] = useState<string | null>(null);
-  const [detectedIP, setDetectedIP] = useState<string | null>(null);
-  const [hotspotActive, setHotspotActive] = useState<boolean | null>(null);
-  const [isCheckingNetwork, setIsCheckingNetwork] = useState(true);
 
   useEffect(() => {
     // Set connection mode to Hotspot when this screen loads
     setConnectionMode('hotspot');
-    
+
     AsyncStorage.getItem("Player").then((val) => {
       if (val) setUsername(val);
     });
-    loadHostIP();
-    checkNetworkStatus();
   }, []);
-
-  const loadHostIP = async () => {
-    const ip = await getServerIP('hotspot');
-    setHostIP(ip);
-  };
-
-  const checkNetworkStatus = async () => {
-    setIsCheckingNetwork(true);
-    try {
-      // Check if hotspot is active
-      const isActive = await isHotspotActive();
-      setHotspotActive(isActive);
-      
-      // Get current device IP
-      const currentIP = await getDeviceIPv4();
-      setDetectedIP(currentIP);
-      
-      // If hotspot is active and no IP configured, auto-suggest detected IP
-      if (isActive && currentIP && !hostIP) {
-        setHostIP(currentIP);
-        await setServerIP(currentIP, 'hotspot');
-      }
-    } catch (error) {
-      console.error('[HomeHotspot] Error checking network:', error);
-    } finally {
-      setIsCheckingNetwork(false);
-    }
-  };
 
   const inputRef = useRef<TextInput>(null);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 });
-  
+
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
       const newIndex = viewableItems[0].index;
@@ -126,8 +88,6 @@ export default function HomeHotspot() {
   useFocusEffect(
     useCallback(() => {
       setEditing(false);
-      loadHostIP();
-      checkNetworkStatus();
     }, []),
   );
 
@@ -136,14 +96,20 @@ export default function HomeHotspot() {
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  const handleSaveIP = async (ip: string) => {
-    await setServerIP(ip, 'hotspot');
-    setHostIP(ip);
-    await checkNetworkStatus();
-  };
-
   const handleBack = () => {
     navigation.goBack();
+  };
+
+  const navigateToPrep = (isCustom: boolean) => {
+    const selectedMode = gameModes[activeIndex];
+    navigation.navigate("HotspotPrep", {
+      username,
+      action: "host",
+      mode: selectedMode.title,
+      time: selectedMode.time,
+      variant: "standard",
+      isCustom,
+    });
   };
 
   return (
@@ -154,13 +120,13 @@ export default function HomeHotspot() {
           <Pressable onPress={handleBack} style={styles.backButton} hitSlop={8}>
             <MaterialIcons name="arrow-back" size={24} color="#333" />
           </Pressable>
-          
+
           {/* Centered Mode Banner */}
           <View style={styles.modeBanner}>
             <MaterialIcons name="settings-input-antenna" size={20} color="#69923e" />
             <Text style={styles.modeBannerText}>Hotspot Mode</Text>
           </View>
-          
+
           {/* Info Button */}
           <Pressable onPress={() => setInstructionsVisible(true)} style={styles.infoButton} hitSlop={8}>
             <MaterialIcons name="info-outline" size={24} color="#69923e" />
@@ -227,19 +193,7 @@ export default function HomeHotspot() {
               styles.hostBtn,
               { opacity: pressed ? 0.85 : 1 },
             ]}
-            onPress={() => {
-              const selectedMode = gameModes[activeIndex];
-              if (selectedMode.id === "custom") {
-                navigation.navigate("CustomTime", { username });
-              } else {
-                navigation.navigate("HostGame", {
-                  mode: selectedMode.title,
-                  time: selectedMode.time,
-                  username,
-                  variant: "standard",
-                });
-              }
-            }}
+            onPress={() => navigateToPrep(gameModes[activeIndex].id === "custom")}
           >
             <View style={styles.actionBtnContent}>
               <MaterialIcons name="wifi-tethering" size={20} color="white" />
@@ -257,80 +211,13 @@ export default function HomeHotspot() {
 
         {/* Guest Section */}
         <View style={styles.guestSection}>
-          {/* Hotspot Status Warning */}
-          {!isCheckingNetwork && hotspotActive === false && (
-            <View style={styles.hotspotWarning}>
-              <MaterialIcons name="wifi-tethering-off" size={20} color="#dc2626" />
-              <Text style={styles.hotspotWarningText}>
-                Hotspot appears to be OFF. Turn on your hotspot before hosting.
-              </Text>
-            </View>
-          )}
-
-          {/* Hotspot Active Indicator */}
-          {!isCheckingNetwork && hotspotActive === true && (
-            <View style={styles.hotspotActive}>
-              <MaterialIcons name="wifi-tethering" size={20} color="#10b981" />
-              <Text style={styles.hotspotActiveText}>
-                Hotspot detected • Ready to host
-              </Text>
-            </View>
-          )}
-
-          {/* IP Status */}
-          {isCheckingNetwork ? (
-            <View style={styles.ipStatusConfigured}>
-              <ActivityIndicator size="small" color="#69923e" />
-              <Text style={styles.ipStatusText}>Checking network...</Text>
-            </View>
-          ) : hostIP ? (
-            <View style={styles.ipInfoContainer}>
-              <View style={styles.ipStatusConfigured}>
-                <MaterialIcons name="check-circle" size={16} color="#10b981" />
-                <Text style={styles.ipStatusText}>Current: {hostIP}</Text>
-              </View>
-              {/* Show detected IP if different from configured */}
-              {detectedIP && detectedIP !== hostIP && (
-                <Text style={styles.ipHintText}>
-                  Detected IP: {detectedIP}
-                </Text>
-              )}
-              {/* Show default hotspot IP suggestion */}
-              {!hotspotActive && (
-                <Text style={styles.ipHintText}>
-                  Expected hotspot IP: {getDefaultHotspotIP()}
-                </Text>
-              )}
-            </View>
-          ) : (
-            <View style={styles.ipStatusWarning}>
-              <MaterialIcons name="warning" size={16} color="#f59e0b" />
-              <Text style={styles.ipStatusWarningText}>Configure IP before hosting or joining</Text>
-            </View>
-          )}
-
-          {/* Configure IP Button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.configBtn,
-              { opacity: pressed ? 0.85 : 1 },
-            ]}
-            onPress={() => setConfigModalVisible(true)}
-          >
-            <View style={styles.actionBtnContent}>
-              <MaterialIcons name="settings" size={20} color="#1e6b40" />
-              <Text style={styles.configBtnText}>Configure Host IP</Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={20} color="#1e6b40" />
-          </Pressable>
-
           {/* Join Button */}
           <Pressable
             style={({ pressed }) => [
               styles.joinBtn,
               { opacity: pressed ? 0.85 : 1 },
             ]}
-            onPress={() => navigation.navigate("JoinGame", { username })}
+            onPress={() => navigation.navigate("HotspotPrep", { username, action: "join" })}
           >
             <View style={styles.actionBtnContent}>
               <MaterialIcons name="login" size={20} color="#1e6b40" />
@@ -347,15 +234,6 @@ export default function HomeHotspot() {
       <InstructionsModal
         visible={instructionsVisible}
         onClose={() => setInstructionsVisible(false)}
-        mode="hotspot"
-      />
-
-      {/* IP Config Modal */}
-      <IPConfigModal
-        visible={configModalVisible}
-        onClose={() => setConfigModalVisible(false)}
-        onSave={handleSaveIP}
-        currentIP={hostIP}
         mode="hotspot"
       />
 
@@ -576,90 +454,6 @@ const styles = StyleSheet.create({
   guestSection: {
     paddingHorizontal: 20,
     gap: 12,
-  },
-  hotspotWarning: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(254, 226, 226, 0.95)",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.3)",
-  },
-  hotspotWarningText: {
-    flex: 1,
-    fontFamily: "GoogleSansFlex_500Medium",
-    fontSize: 12,
-    color: "#991b1b",
-    lineHeight: 16,
-  },
-  hotspotActive: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(16, 185, 129, 0.15)",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.3)",
-  },
-  hotspotActiveText: {
-    fontFamily: "GoogleSansFlex_600SemiBold",
-    fontSize: 13,
-    color: "#10b981",
-  },
-  ipInfoContainer: {
-    gap: 6,
-    alignItems: "center",
-  },
-  ipHintText: {
-    fontFamily: "GoogleSansFlex_400Regular",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.6)",
-    textAlign: "center",
-  },
-  ipStatusConfigured: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    justifyContent: "center",
-  },
-  ipStatusText: {
-    fontFamily: "GoogleSansFlex_500Medium",
-    fontSize: 13,
-    color: "#10b981",
-  },
-  ipStatusWarning: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    justifyContent: "center",
-    backgroundColor: "rgba(245, 158, 11, 0.15)",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  ipStatusWarningText: {
-    fontFamily: "GoogleSansFlex_500Medium",
-    fontSize: 13,
-    color: "#f59e0b",
-  },
-  configBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "white",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
-  },
-  configBtnText: {
-    fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 15,
-    color: "#1e6b40",
   },
   joinBtn: {
     flexDirection: "row",

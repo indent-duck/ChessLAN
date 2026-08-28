@@ -28,18 +28,16 @@ A React Native (Expo ~54) mobile chess app for **true local network multiplayer*
 ```
 Home (username setup only)
   ↓
-ConnectionTypeSelect (WiFi or Hotspot choice)
-  ↓                              ↓
-HomeWiFi                    HomeHotspot
-(WiFi mode lobby)           (Hotspot mode lobby)
-  ↓                              ↓
-SelectMode → HostGame → GameRoom
-           → JoinGame → GameRoom
-CustomTime → SelectMode (for custom time only)
+HomeWiFi | HomeHotspot
+(WiFi mode lobby) | (Hotspot mode lobby)
+  ↓
+(wifi)  HostGame | JoinGame → GameRoom
+(hotspot) HotspotPrep → HostGame | CustomTime | JoinGame → GameRoom
+CustomTime (Custom mode) → HostGame
 ```
 - Home: username input (editable inline), horizontal scrollable card carousel to pick game mode, Settings and About buttons
-- SelectMode: choose variant (Standard/Chess960) and start hosting
-- CustomTime: pick minutes (1–30) + increment (0–30s), navigates to SelectMode with custom time string (only for Custom mode)
+- CustomTime: pick minutes (1–30) + increment (0–30s), navigates to HostGame (only for Custom mode)
+- HotspotPrep: hotspot validation screen (see below); only used from HomeHotspot
 - HostGame: starts local server, shows room code, wait for guest, pick color (swap toggle), Start Game → GameRoom
 - JoinGame: enter 4-character room code, connects to host, wait for start → GameRoom
 - GameRoom: full chess gameplay with real-time multiplayer sync
@@ -49,17 +47,9 @@ CustomTime → SelectMode (for custom time only)
 ### Home (`screens/Home.tsx`)
 - **Simplified entry point** - Username setup and About button only
 - Username stored in AsyncStorage, editable with inline TextInput + check/edit icon
-- Large "Play Multiplayer" button navigates to ConnectionTypeSelect
+- Two mode buttons navigate directly to HomeWiFi or HomeHotspot
 - Footer shows "ChessLAN v1.0.2"
 - No game mode selection here (moved to HomeWiFi/HomeHotspot)
-
-### ConnectionTypeSelect (`screens/ConnectionTypeSelect.tsx`)
-- **New screen** - Choose between WiFi Network or Phone Hotspot
-- Two large selection cards with icons and descriptions
-- WiFi Network: "Both players connect to the same WiFi network"
-- Phone Hotspot: "Host creates hotspot, guest connects to it"
-- Slide-up animation on mount
-- Back button returns to Home
 
 ### HomeWiFi (`screens/HomeWiFi.tsx`)
 - **WiFi mode multiplayer lobby** - Shows "WiFi Network Mode" banner
@@ -71,18 +61,26 @@ CustomTime → SelectMode (for custom time only)
   - "Configure Host IP" button opens IPConfigModal
   - "Join with Room Code" button navigates to JoinGame
 - **Host section:**
-  - "Host [Mode] Game" button navigates to SelectMode or CustomTime
+  - "Host [Mode] Game" button navigates to HostGame or CustomTime
 - Separate IP storage from Hotspot mode (`WIFI_SERVER_IP`)
 - Sets connection mode to 'wifi' on mount
-- Back button returns to ConnectionTypeSelect
 
 ### HomeHotspot (`screens/HomeHotspot.tsx`)
 - **Hotspot mode multiplayer lobby** - Shows "Hotspot Mode" banner
-- Hotspot instructions box with emoji icon
-- Same carousel and layout as HomeWiFi
+- Game mode carousel (Rapid, Blitz, Bullet, Custom) - same layout as HomeWiFi
+- **Host:** "Host [Mode] Game" button navigates to HotspotPrep (host action)
+- **Join:** "Join with Room Code" button navigates to HotspotPrep (join action)
+- No status/IP/role UI here — hotspot validation and IP config moved to HotspotPrep
 - Separate IP storage from WiFi mode (`HOTSPOT_SERVER_IP`)
 - Sets connection mode to 'hotspot' on mount
-- Back button returns to ConnectionTypeSelect
+
+### HotspotPrep (`screens/HotspotPrep.tsx`)
+- **Hotspot prep screen** - sits between HomeHotspot and the host/join/custom screens
+- Route params: `{ username, action: 'host' | 'join', mode?, time?, variant?, isCustom? }`
+- **Host action:** informational only — shows the host's device IP and expected hotspot gateway; reminds to turn the hotspot on. The "Host … Game" button is **always enabled** (no hotspot ON/OFF check, no gating; custom → CustomTime, standard → HostGame)
+- **Join action:** checks `isConnectedToWireless()`; shows "Connected to the host's network ✓" or "Connect to the host's hotspot first"; hosts the hotspot IP config (quick-set of the default gateway + `IPConfigModal`); **gates "Continue to Join"** until connected AND a host IP is configured
+- Auto re-checks on focus (join only)
+- Footer + IPConfigModal (hotspot mode)
 
 ### IPConfigModal (`components/IPConfigModal.tsx`)
 - **Modal for IP configuration** - Slides up from bottom
@@ -91,17 +89,9 @@ CustomTime → SelectMode (for custom time only)
 - Shows network connection status (WiFi/Hotspot/None)
 - Pre-fills with last saved IP for current mode
 - Shows "Last saved" IP at bottom with restore option
+- **Hotspot mode:** shows expected hotspot IP hint with a one-tap quick-set button
 - Success animation (green checkmark) on save
 - Auto-closes after successful save
-
-### SelectMode (`screens/SelectMode.tsx`)
-- Receives `mode`, `time`, `username` as route params
-- **Variant selection:** Standard or Chess960 with toggle buttons
-- Standard: Traditional chess starting position
-- Chess960: Fischer Random Chess with randomized back rank
-- Shows variant description when Chess960 is selected
-- Start Hosting button navigates to HostGame with selected variant
-- Slide-up + fade-in panel animation on mount, reverse on back
 
 ### HostGame (`screens/HostGame.tsx`)
 - Receives `mode`, `time`, `username`, `variant` (standard or chess960)
@@ -133,7 +123,7 @@ CustomTime → SelectMode (for custom time only)
 ### CustomTime (`screens/CustomTime.tsx`)
 - Chip selectors for minutes [1,2,3,5,10,15,20,30] and increment [0,1,2,3,5,10,15,30]
 - Formats time as `"X min"` or `"X+Y"` (with increment)
-- Navigates to SelectMode (skips HostGame/JoinGame choice)
+- Navigates to HostGame with the selected custom time and variant
 
 ### GameRoom (`screens/GameRoom.tsx`)
 - Receives `mode`, `time`, `username`, `flipped`, `myColor`, `opponentUsername`, `variant`, `chess960Fen`, `isHost`
@@ -156,7 +146,7 @@ CustomTime → SelectMode (for custom time only)
 
 ### GameCard (`components/GameCard.tsx`)
 - Card in the Home carousel
-- "Play Now" → navigates to CustomTime (if Custom) or SelectMode
+- Tapping the selected mode hosts that game (Custom opens CustomTime)
 
 ## What's NOT done yet
 - Auto-detection of host IP for guests (currently manual entry via modal)

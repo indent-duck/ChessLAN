@@ -3,9 +3,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 interface IPConfigReminderProps {
   variant: "host" | "guest";
+  mode?: "wifi" | "hotspot";
 }
 
-export default function IPConfigReminder({ variant }: IPConfigReminderProps) {
+export default function IPConfigReminder({ variant, mode = "wifi" }: IPConfigReminderProps) {
   return (
     <View style={styles.reminderBox}>
       <MaterialIcons name="info-outline" size={16} color="#69923e" />
@@ -15,7 +16,9 @@ export default function IPConfigReminder({ variant }: IPConfigReminderProps) {
           <Text style={styles.reminderText}>
             • Find your device IP in WiFi/Hotspot settings{'\n'}
             • Share your IP and room code with your opponent{'\n'}
-            • Both devices must be on the same network
+            {mode === "hotspot"
+              ? "• Guest must connect to your hotspot network"
+              : "• Both devices must be on the same network"}
           </Text>
         ) : (
           <Text style={styles.reminderText}>

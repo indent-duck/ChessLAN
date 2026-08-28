@@ -108,43 +108,87 @@ export function getDefaultHotspotIP(): string {
 }
 
 /**
+ * Known hotspot subnet prefixes (first three octets) across Android OEMs, iOS, and Linux.
+ * Covers Samsung, Xiaomi, OPPO, realme, OnePlus, and many Android 11+ devices.
+ */
+export const HOTSPOT_SUBNETS = [
+  '192.168.42',
+  '192.168.43',
+  '192.168.44',
+  '192.168.45',
+  '192.168.137',
+  '192.168.150',
+  '172.20.10',
+  '10.0.0',
+  '10.42.0',
+];
+
+/**
  * Check if the current IP address looks like a hotspot IP
- * Returns true if IP matches common hotspot patterns
+ * Returns true if IP starts with any known hotspot subnet prefix
  */
 export function isLikelyHotspotIP(ip: string | null): boolean {
   if (!ip) return false;
   
-  // Android hotspot: 192.168.43.x
-  if (ip.startsWith('192.168.43.')) return true;
-  
-  // iOS hotspot: 172.20.10.x
-  if (ip.startsWith('172.20.10.')) return true;
-  
-  return false;
+  return HOTSPOT_SUBNETS.some((subnet) => ip.startsWith(`${subnet}.`));
 }
 
 /**
  * Detect if device is likely acting as a hotspot
- * This checks if the device IP matches common hotspot gateway addresses
+ * Returns true if the device IP is in a known hotspot subnet AND is a
+ * gateway-style host octet (.1 or .2) OR equals the default gateway IP.
  */
 export async function isHotspotActive(): Promise<boolean> {
   try {
     const ip = await getDeviceIPv4();
+    console.log('[NetworkUtils] isHotspotActive - detected device IP:', ip);
     
     if (!ip) return false;
     
     // Check if IP matches platform's hotspot gateway pattern
     const defaultHotspotIP = getDefaultHotspotIP();
+    console.log('[NetworkUtils] isHotspotActive - default hotspot IP:', defaultHotspotIP);
     
     // Exact match for gateway address
     if (ip === defaultHotspotIP) return true;
     
-    // Also check for common hotspot subnet patterns
-    return isLikelyHotspotIP(ip);
+    // IP must be in a known hotspot subnet first
+    if (!isLikelyHotspotIP(ip)) {
+      console.log('[NetworkUtils] isHotspotActive - IP not in known hotspot subnet');
+      return false;
+    }
+    
+    // Gateway-style host octet (.1 or .2)
+    const lastOctet = ip.split('.').pop();
+    if (lastOctet === '1' || lastOctet === '2') return true;
+    
+    return false;
   } catch (error) {
     console.error('[NetworkUtils] Failed to detect hotspot:', error);
     return false;
   }
+}
+
+/**
+ * Detect if the device is connected to a wireless (WiFi) network
+ */
+export async function isConnectedToWireless(): Promise<boolean> {
+  return (await getNetworkType()) === 'wifi';
+}
+
+/**
+ * Get a list of candidate host hotspot gateway IPs
+ * Used for guest hints / quick-set
+ */
+export function getGatewayCandidates(): string[] {
+  const candidates = new Set<string>([getDefaultHotspotIP()]);
+  
+  HOTSPOT_SUBNETS.forEach((subnet) => {
+    candidates.add(`${subnet}.1`);
+    candidates.add(`${subnet}.2`);
+  });
+  
+  return Array.from(candidates);
 }
 
 /**
