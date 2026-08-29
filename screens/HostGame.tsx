@@ -7,7 +7,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useLocalServer } from "../hooks/useLocalServer";
 import ChessLANFooter from "../components/ChessLANFooter";
 import IPConfigReminder from "../components/IPConfigReminder";
-import { getDeviceIPv4, isHotspotActive, getDefaultHotspotIP } from "../utils/networkUtils";
+import { getDeviceIPv4, isHotspotActive } from "../utils/networkUtils";
 import { getServerIP, getConnectionMode } from "../config";
 
 export default function HostGame() {
@@ -253,17 +253,6 @@ export default function HostGame() {
                 )}
               </View>
             </View>
-
-            {/* Hotspot Warning for hotspot mode */}
-            {!ipLoading && connectionMode === 'hotspot' && hotspotActive === false && (
-              <View style={styles.hotspotWarningBox}>
-                <MaterialIcons name="wifi-tethering-off" size={18} color="#fbbf24" />
-                <Text style={styles.hotspotWarningText}>
-                  Hotspot may be OFF. Current IP: {deviceIP || 'unknown'}.
-                  {'\n'}Expected: {getDefaultHotspotIP()}
-                </Text>
-              </View>
-            )}
 
             {/* Hotspot Active Confirmation */}
             {!ipLoading && connectionMode === 'hotspot' && hotspotActive === true && (
@@ -519,24 +508,6 @@ const styles = StyleSheet.create({
     fontFamily: "GoogleSansFlex_400Regular",
     fontSize: 11,
     color: "rgba(255,255,255,0.8)",
-    lineHeight: 15,
-  },
-  hotspotWarningBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: "rgba(251, 191, 36, 0.15)",
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: "rgba(251, 191, 36, 0.3)",
-  },
-  hotspotWarningText: {
-    flex: 1,
-    fontFamily: "GoogleSansFlex_500Medium",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.95)",
     lineHeight: 15,
   },
   hotspotActiveBox: {

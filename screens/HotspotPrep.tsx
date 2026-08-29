@@ -169,7 +169,6 @@ export default function HotspotPrep() {
               <MaterialIcons name="info-outline" size={18} color="#69923e" />
               <Text style={styles.infoText}>
                 Your device IP: {deviceIP || "unknown"}
-                {"\n"}Expected gateway: {getDefaultHotspotIP()}
               </Text>
             </View>
 

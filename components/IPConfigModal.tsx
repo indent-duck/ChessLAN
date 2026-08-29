@@ -14,7 +14,6 @@ import {
 import {
   validateIPFormat,
   getConnectionStatusText,
-  getDefaultHotspotIP,
 } from "../utils/networkUtils";
 
 interface IPConfigModalProps {
@@ -164,25 +163,6 @@ export default function IPConfigModal({
                   <Text style={styles.infoText}>Format: xxx.xxx.xxx.xxx</Text>
                   <Text style={styles.infoExample}>Example: 192.168.1.100</Text>
                 </View>
-
-                {mode === "hotspot" && (
-                  <View style={styles.hotspotHintBox}>
-                    <Text style={styles.hotspotHintTitle}>
-                      Expected hotspot IP
-                    </Text>
-                    <Text style={styles.hotspotHintText}>
-                      {getDefaultHotspotIP()} (the host's gateway IP)
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.quickSetButton}
-                      onPress={() => setIpInput(getDefaultHotspotIP())}
-                    >
-                      <Text style={styles.quickSetText}>
-                        Quick-set {getDefaultHotspotIP()}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
 
                 <TouchableOpacity
                   style={[
@@ -346,40 +326,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.9)",
     fontFamily: "GoogleSansFlex_500Medium",
     marginTop: 6,
-  },
-  hotspotHintBox: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 12,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  hotspotHintTitle: {
-    fontSize: 14,
-    color: "white",
-    fontFamily: "GoogleSansFlex_700Bold",
-    marginBottom: 8,
-  },
-  hotspotHintText: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.9)",
-    fontFamily: "GoogleSansFlex_400Regular",
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  quickSetButton: {
-    backgroundColor: "white",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    alignSelf: "flex-start",
-  },
-  quickSetText: {
-    fontSize: 13,
-    color: "#69923e",
-    fontFamily: "GoogleSansFlex_700Bold",
   },
   saveButton: {
     backgroundColor: "white",

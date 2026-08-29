@@ -17,6 +17,7 @@ import { Chess, Square } from "chess.js";
 import Trophy from "../assets/svg/trophy.svg";
 import { useLocalServer } from "../hooks/useLocalServer";
 import { useLocalClient } from "../hooks/useLocalClient";
+import { getConnectionMode } from "../config";
 
 // Generate a valid Chess960 starting position
 function generateChess960Position(): string {
@@ -374,6 +375,13 @@ export default function GameRoom() {
     clearDrawOffer();
   };
 
+  const goModeHome = async () => {
+    const connectionMode = await getConnectionMode();
+    navigation.navigate(
+      (connectionMode === "hotspot" ? "HomeHotspot" : "HomeWiFi") as never,
+    );
+  };
+
   const handleBackPress = () => {
     if (gameOver) {
       navigation.goBack();
@@ -387,7 +395,7 @@ export default function GameRoom() {
     if (myColor) {
       sendNetworkMessage({ type: "abandon" });
     }
-    navigation.navigate("Home" as never);
+    goModeHome();
   };
 
   return (
@@ -549,7 +557,7 @@ export default function GameRoom() {
       <Modal visible={!!gameOver} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Pressable style={styles.modalClose} onPress={() => navigation.navigate("Home" as never)} hitSlop={8}>
+            <Pressable style={styles.modalClose} onPress={goModeHome} hitSlop={8}>
               <MaterialIcons name="close" size={20} color="#888" />
             </Pressable>
             <View style={styles.modalHeaderRow}>
@@ -600,7 +608,7 @@ export default function GameRoom() {
             </View>
             <View style={{ padding: 24, gap: 12 }}>
               <Text style={styles.resignModalText}>{opponentName} has abandoned the game.</Text>
-              <Pressable style={[styles.resignConfirmBtn, { backgroundColor: "#69923e" }]} onPress={() => navigation.navigate("Home" as never)}>
+              <Pressable style={[styles.resignConfirmBtn, { backgroundColor: "#69923e" }]} onPress={goModeHome}>
                 <Text style={styles.resignConfirmBtnText}>Return to Home</Text>
               </Pressable>
             </View>
