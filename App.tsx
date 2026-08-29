@@ -7,7 +7,6 @@ import { useEffect } from "react";
 import Home from "./screens/Home";
 import HomeWiFi from "./screens/HomeWiFi";
 import HomeHotspot from "./screens/HomeHotspot";
-import HotspotPrep from "./screens/HotspotPrep";
 import HostGame from "./screens/HostGame";
 import JoinGame from "./screens/JoinGame";
 import GameRoom from "./screens/GameRoom";
@@ -42,11 +41,6 @@ export default function App() {
           name="HomeHotspot" 
           component={HomeHotspot} 
           options={{ animation: "slide_from_right" }} 
-        />
-        <Stack.Screen
-          name="HotspotPrep"
-          component={HotspotPrep}
-          options={{ animation: "slide_from_bottom" }}
         />
         <Stack.Screen
           name="HostGame"

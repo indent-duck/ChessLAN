@@ -21,8 +21,9 @@ import Card from "../components/GameCard";
 import King from "../assets/svg/king.svg";
 import Queen from "../assets/svg/queen.svg";
 import Chessboard from "../assets/svg/chessboard.svg";
-import { setConnectionMode } from "../config";
+import { getServerIP, setServerIP, setConnectionMode } from "../config";
 import ChessLANFooter from "../components/ChessLANFooter";
+import IPConfigModal from "../components/IPConfigModal";
 import InstructionsModal from "../components/InstructionsModal";
 
 const CARD_WIDTH = 260;
@@ -51,6 +52,8 @@ export default function HomeHotspot() {
   const [editing, setEditing] = useState(false);
   const [aboutVisible, setAboutVisible] = useState(false);
   const [instructionsVisible, setInstructionsVisible] = useState(false);
+  const [configModalVisible, setConfigModalVisible] = useState(false);
+  const [hostIP, setHostIP] = useState<string | null>(null);
 
   useEffect(() => {
     // Set connection mode to Hotspot when this screen loads
@@ -59,7 +62,13 @@ export default function HomeHotspot() {
     AsyncStorage.getItem("Player").then((val) => {
       if (val) setUsername(val);
     });
+    loadHostIP();
   }, []);
+
+  const loadHostIP = async () => {
+    const ip = await getServerIP('hotspot');
+    setHostIP(ip);
+  };
 
   const inputRef = useRef<TextInput>(null);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 });
@@ -88,6 +97,7 @@ export default function HomeHotspot() {
   useFocusEffect(
     useCallback(() => {
       setEditing(false);
+      loadHostIP();
     }, []),
   );
 
@@ -96,20 +106,27 @@ export default function HomeHotspot() {
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
+  const handleSaveIP = async (ip: string) => {
+    await setServerIP(ip, 'hotspot');
+    setHostIP(ip);
+  };
+
   const handleBack = () => {
     navigation.goBack();
   };
 
-  const navigateToPrep = (isCustom: boolean) => {
+  const handleHostGame = () => {
     const selectedMode = gameModes[activeIndex];
-    navigation.navigate("HotspotPrep", {
-      username,
-      action: "host",
-      mode: selectedMode.title,
-      time: selectedMode.time,
-      variant: "standard",
-      isCustom,
-    });
+    if (selectedMode.id === "custom") {
+      navigation.navigate("CustomTime", { username });
+    } else {
+      navigation.navigate("HostGame", {
+        mode: selectedMode.title,
+        time: selectedMode.time,
+        username,
+        variant: "standard",
+      });
+    }
   };
 
   return (
@@ -193,7 +210,7 @@ export default function HomeHotspot() {
               styles.hostBtn,
               { opacity: pressed ? 0.85 : 1 },
             ]}
-            onPress={() => navigateToPrep(gameModes[activeIndex].id === "custom")}
+            onPress={handleHostGame}
           >
             <View style={styles.actionBtnContent}>
               <MaterialIcons name="wifi-tethering" size={20} color="white" />
@@ -211,13 +228,41 @@ export default function HomeHotspot() {
 
         {/* Guest Section */}
         <View style={styles.guestSection}>
+          {/* IP Status */}
+          {hostIP ? (
+            <View style={styles.ipStatusConfigured}>
+              <MaterialIcons name="check-circle" size={16} color="#10b981" />
+              <Text style={styles.ipStatusText}>Current: {hostIP}</Text>
+            </View>
+          ) : (
+            <View style={styles.ipStatusWarning}>
+              <MaterialIcons name="warning" size={16} color="#f59e0b" />
+              <Text style={styles.ipStatusWarningText}>Configure IP before joining</Text>
+            </View>
+          )}
+
+          {/* Configure IP Button */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.configBtn,
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
+            onPress={() => setConfigModalVisible(true)}
+          >
+            <View style={styles.actionBtnContent}>
+              <MaterialIcons name="settings" size={20} color="#1e6b40" />
+              <Text style={styles.configBtnText}>Configure Host IP</Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={20} color="#1e6b40" />
+          </Pressable>
+
           {/* Join Button */}
           <Pressable
             style={({ pressed }) => [
               styles.joinBtn,
               { opacity: pressed ? 0.85 : 1 },
             ]}
-            onPress={() => navigation.navigate("HotspotPrep", { username, action: "join" })}
+            onPress={() => navigation.navigate("JoinGame", { username })}
           >
             <View style={styles.actionBtnContent}>
               <MaterialIcons name="login" size={20} color="#1e6b40" />
@@ -234,6 +279,15 @@ export default function HomeHotspot() {
       <InstructionsModal
         visible={instructionsVisible}
         onClose={() => setInstructionsVisible(false)}
+        mode="hotspot"
+      />
+
+      {/* IP Config Modal */}
+      <IPConfigModal
+        visible={configModalVisible}
+        onClose={() => setConfigModalVisible(false)}
+        onSave={handleSaveIP}
+        currentIP={hostIP}
         mode="hotspot"
       />
 
@@ -454,6 +508,46 @@ const styles = StyleSheet.create({
   guestSection: {
     paddingHorizontal: 20,
     gap: 12,
+  },
+  ipStatusConfigured: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    justifyContent: "center",
+  },
+  ipStatusText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 13,
+    color: "#10b981",
+  },
+  ipStatusWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    justifyContent: "center",
+    backgroundColor: "rgba(245, 158, 11, 0.15)",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  ipStatusWarningText: {
+    fontFamily: "GoogleSansFlex_500Medium",
+    fontSize: 13,
+    color: "#f59e0b",
+  },
+  configBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "white",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+  },
+  configBtnText: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 15,
+    color: "#1e6b40",
   },
   joinBtn: {
     flexDirection: "row",

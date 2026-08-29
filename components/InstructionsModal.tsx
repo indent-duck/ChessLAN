@@ -29,7 +29,7 @@ export default function InstructionsModal({
           "Turn on your phone's mobile hotspot",
           "Share network name and password with your opponent",
           "Select a game mode and tap \"Host Game\"",
-          "Share the room code with your opponent",
+          "On the host screen, share the room code shown with your opponent and wait for them to join",
         ]
       : [
           "Make sure both devices are connected to the same WiFi network",

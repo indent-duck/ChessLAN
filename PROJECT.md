@@ -32,12 +32,11 @@ HomeWiFi | HomeHotspot
 (WiFi mode lobby) | (Hotspot mode lobby)
   ↓
 (wifi)  HostGame | JoinGame → GameRoom
-(hotspot) HotspotPrep → HostGame | CustomTime | JoinGame → GameRoom
+(hotspot) HostGame | CustomTime | JoinGame → GameRoom
 CustomTime (Custom mode) → HostGame
 ```
 - Home: username input (editable inline), horizontal scrollable card carousel to pick game mode, Settings and About buttons
 - CustomTime: pick minutes (1–30) + increment (0–30s), navigates to HostGame (only for Custom mode)
-- HotspotPrep: hotspot validation screen (see below); only used from HomeHotspot
 - HostGame: starts local server, shows room code, wait for guest, pick color (swap toggle), Start Game → GameRoom
 - JoinGame: enter 4-character room code, connects to host, wait for start → GameRoom
 - GameRoom: full chess gameplay with real-time multiplayer sync
@@ -68,19 +67,14 @@ CustomTime (Custom mode) → HostGame
 ### HomeHotspot (`screens/HomeHotspot.tsx`)
 - **Hotspot mode multiplayer lobby** - Shows "Hotspot Mode" banner
 - Game mode carousel (Rapid, Blitz, Bullet, Custom) - same layout as HomeWiFi
-- **Host:** "Host [Mode] Game" button navigates to HotspotPrep (host action)
-- **Join:** "Join with Room Code" button navigates to HotspotPrep (join action)
-- No status/IP/role UI here — hotspot validation and IP config moved to HotspotPrep
+- **Guest section:**
+  - IP status display (configured with checkmark or warning)
+  - "Configure Host IP" button opens IPConfigModal
+  - "Join with Room Code" button navigates to JoinGame
+- **Host section:**
+  - "Host [Mode] Game" button navigates to HostGame or CustomTime
 - Separate IP storage from WiFi mode (`HOTSPOT_SERVER_IP`)
 - Sets connection mode to 'hotspot' on mount
-
-### HotspotPrep (`screens/HotspotPrep.tsx`)
-- **Hotspot prep screen** - sits between HomeHotspot and the host/join/custom screens
-- Route params: `{ username, action: 'host' | 'join', mode?, time?, variant?, isCustom? }`
-- **Host action:** informational only — shows the host's device IP and expected hotspot gateway; reminds to turn the hotspot on. The "Host … Game" button is **always enabled** (no hotspot ON/OFF check, no gating; custom → CustomTime, standard → HostGame)
-- **Join action:** checks `isConnectedToWireless()`; shows "Connected to the host's network ✓" or "Connect to the host's hotspot first"; hosts the hotspot IP config (quick-set of the default gateway + `IPConfigModal`); **gates "Continue to Join"** until connected AND a host IP is configured
-- Auto re-checks on focus (join only)
-- Footer + IPConfigModal (hotspot mode)
 
 ### IPConfigModal (`components/IPConfigModal.tsx`)
 - **Modal for IP configuration** - Slides up from bottom
