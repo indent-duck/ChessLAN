@@ -285,7 +285,7 @@ export default function HotspotPrep() {
         )}
       </Animated.View>
 
-      <ChessLANFooter version="1.0.2" />
+      <ChessLANFooter version="2.0.1" />
 
       {/* IP Config Modal */}
       <IPConfigModal

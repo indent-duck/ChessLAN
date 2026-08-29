@@ -48,7 +48,7 @@ CustomTime (Custom mode) → HostGame
 - **Simplified entry point** - Username setup and About button only
 - Username stored in AsyncStorage, editable with inline TextInput + check/edit icon
 - Two mode buttons navigate directly to HomeWiFi or HomeHotspot
-- Footer shows "ChessLAN v1.0.2"
+- Footer shows "ChessLAN v2.0.1"
 - No game mode selection here (moved to HomeWiFi/HomeHotspot)
 
 ### HomeWiFi (`screens/HomeWiFi.tsx`)
@@ -191,7 +191,7 @@ CustomTime (Custom mode) → HostGame
 - Full chess UI with legal moves, captures, timers
 - Connection error handling and user feedback
 - About modal with creator credits (Lee Johnrich H. Ramirez, BS Information Technology, CvSU)
-- App updated to ChessLAN v1.0.2
+- App updated to ChessLAN v2.0.1
 - Splash screen with expo-splash-screen integration
 - Loading states and connection status indicators
 - **Complete local WiFi or Hotspot multiplayer** - no external server needed

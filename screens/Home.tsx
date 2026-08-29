@@ -155,7 +155,7 @@ export default function Home() {
         </View>
       </View>
 
-      <ChessLANFooter version="1.0.2" />
+      <ChessLANFooter version="2.0.1" />
 
       {/* About Modal */}
       <Modal visible={aboutVisible} transparent animationType="fade">
@@ -171,7 +171,7 @@ export default function Home() {
               <MaterialIcons name="info" size={48} color="#1e6b40" />
             </View>
             <Text style={styles.aboutTitle}>ChessLAN</Text>
-            <Text style={styles.aboutVersion}>Version 1.0.2</Text>
+            <Text style={styles.aboutVersion}>Version 2.0.1</Text>
             <View style={styles.aboutDivider} />
             <Text style={styles.aboutLabel}>Created by</Text>
             <Text style={styles.aboutCreator}>Lee Johnrich H. Ramirez</Text>
@@ -195,7 +195,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   container: {
-    flex: 1,
     paddingHorizontal: 24,
     paddingTop: 16,
   },
@@ -235,13 +234,12 @@ const styles = StyleSheet.create({
     minWidth: 100,
   },
   heroArea: {
-    flex: 1,
-    justifyContent: "center",
-    paddingBottom: 20,
+    paddingTop: 12,
+    paddingBottom: 28,
   },
   heroTitle: {
     fontFamily: "GoogleSansFlex_700Bold",
-    fontSize: 48,
+    fontSize: 40,
     color: "#2c2b29",
     marginBottom: 12,
   },
@@ -254,7 +252,7 @@ const styles = StyleSheet.create({
   },
   modeSelectionContainer: {
     backgroundColor: "#69923e",
-    marginTop: "auto",
+    flex: 1,
     paddingTop: 32,
     paddingBottom: 28,
     paddingHorizontal: 20,

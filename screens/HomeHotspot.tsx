@@ -228,7 +228,7 @@ export default function HomeHotspot() {
         </View>
       </View>
 
-      <ChessLANFooter version="1.0.2" />
+      <ChessLANFooter version="2.0.1" />
 
       {/* Instructions Modal */}
       <InstructionsModal
@@ -251,7 +251,7 @@ export default function HomeHotspot() {
               <MaterialIcons name="info" size={48} color="#1e6b40" />
             </View>
             <Text style={styles.aboutTitle}>ChessLAN</Text>
-            <Text style={styles.aboutVersion}>Version 1.0.2</Text>
+            <Text style={styles.aboutVersion}>Version 2.0.1</Text>
             <View style={styles.aboutDivider} />
             <Text style={styles.aboutLabel}>Created by</Text>
             <Text style={styles.aboutCreator}>Lee Johnrich H. Ramirez</Text>
