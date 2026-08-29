@@ -43,6 +43,7 @@ A React Native chess app for **true local network multiplayer** - play chess wit
 ## How It Works
 
 ### WiFi Network Mode
+
 ```
 ┌─────────────────────┐         ┌─────────────────────┐
 │   Host Phone        │         │   Guest Phone       │
@@ -54,6 +55,7 @@ A React Native chess app for **true local network multiplayer** - play chess wit
 ```
 
 ### Phone Hotspot Mode
+
 ```
 ┌─────────────────────┐         ┌─────────────────────┐
 │   Host Phone        │         │   Guest Phone       │
@@ -248,24 +250,6 @@ ChessLAN/
 - Reconnection handling
 - Move sound effects
 - Haptic feedback
-
-### v2.0 (Future)
-
-- Game history/replays
-- ELO rating system (local)
-- Multiple concurrent games
-- Spectator mode
-- Game analysis
-
-## Contributing
-
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
 
 ## Known Limitations
 
