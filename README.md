@@ -2,8 +2,8 @@
 
 A React Native chess app for **true local network multiplayer** - play chess with a friend over WiFi without needing internet or an external server!
 
-![Version](https://img.shields.io/badge/version-2.0.1-blue)
-![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS-green)
+![Version](https://img.shields.io/badge/version-2.0.2-blue)
+![Platform](https://img.shields.io/badge/platform-Android-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
 ## Features
@@ -98,7 +98,7 @@ A React Native chess app for **true local network multiplayer** - play chess wit
 - Node.js 18+
 - npm or yarn
 - Expo CLI
-- Android Studio (for Android) or Xcode (for iOS)
+- Android Studio (for Android)
 
 ### Setup
 
@@ -122,9 +122,6 @@ npm install -g eas-cli
 
 # Build for Android
 eas build --platform android --profile preview
-
-# Build for iOS
-eas build --platform ios --profile preview
 ```
 
 ## Usage
