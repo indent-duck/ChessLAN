@@ -5,23 +5,23 @@ interface WifiConfigReminderProps {
   variant: "host" | "guest";
 }
 
-export default function WifiConfigReminder({ variant }: WifiConfigReminderProps) {
+export default function WifiConfigReminder({
+  variant,
+}: WifiConfigReminderProps) {
   return (
     <View style={styles.reminderBox}>
       <MaterialIcons name="info-outline" size={16} color="#69923e" />
       <View style={styles.reminderContent}>
-        <Text style={styles.reminderTitle}>Network Configuration Required</Text>
+        <Text style={styles.reminderTitle}>Important Reminder</Text>
         {variant === "host" ? (
           <Text style={styles.reminderText}>
-            • Find your device IP in WiFi settings{'\n'}
-            • Share your IP and room code with your opponent{'\n'}
-            • Both devices must be on the same network
+            • Both devices must be on the same network{"\n"}• Share your IP
+            address and room code with your opponent
           </Text>
         ) : (
           <Text style={styles.reminderText}>
-            • Ask the host for their IP address{'\n'}
-            • Use "Configure Host IP" button to set it{'\n'}
-            • Enter only IP (e.g., 192.168.1.100), not full URL
+            • Both devices must be on the same network{"\n"}• Ask the host for
+            their IP address{"\n"}• Use "Configure Host IP" button to set it
           </Text>
         )}
       </View>

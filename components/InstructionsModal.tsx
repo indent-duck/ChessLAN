@@ -28,7 +28,7 @@ export default function InstructionsModal({
       : [
           "Make sure both devices are connected to the same WiFi network",
           'Select a game mode and tap "Host Game"',
-          "Share the room code with your opponent",
+          "Share the room code and IP address with your opponent",
           "Wait for your opponent to join",
         ];
 

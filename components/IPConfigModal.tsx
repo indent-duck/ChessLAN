@@ -141,7 +141,7 @@ export default function IPConfigModal({
               >
                 <Text style={styles.description}>
                   {mode === "hotspot"
-                    ? "Enter the host's IP address\n(It's shown on the host's screen)"
+                    ? "Enter the host's IP address\n(shown on the host's screen)"
                     : "Enter the host's IP address\n(Get this from the host device)"}
                 </Text>
 

@@ -1,4 +1,11 @@
-import { View, Text, StyleSheet, Pressable, Animated, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Animated,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -14,7 +21,12 @@ import { getServerIP, getConnectionMode } from "../config";
 export default function HostGame() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const route = useRoute<any>();
-  const { mode, time, username, variant = 'standard' } = route.params ?? {
+  const {
+    mode,
+    time,
+    username,
+    variant = "standard",
+  } = route.params ?? {
     mode: "Rapid",
     time: "10 min",
     username: "",
@@ -25,10 +37,22 @@ export default function HostGame() {
   const [deviceIP, setDeviceIP] = useState<string | null>(null);
   const [configuredIP, setConfiguredIP] = useState<string | null>(null);
   const [ipLoading, setIpLoading] = useState(true);
-  const [connectionMode, setConnectionModeState] = useState<'wifi' | 'hotspot'>('wifi');
+  const [connectionMode, setConnectionModeState] = useState<"wifi" | "hotspot">(
+    "wifi",
+  );
 
   const localServer = useLocalServer();
-  const { roomCode, guestUsername: opponentName, needsRestart, chess960Fen, startServer, stopServer, forceCleanup, updateColor, startGame: startLocalGame } = localServer;
+  const {
+    roomCode,
+    guestUsername: opponentName,
+    needsRestart,
+    chess960Fen,
+    startServer,
+    stopServer,
+    forceCleanup,
+    updateColor,
+    startGame: startLocalGame,
+  } = localServer;
 
   const slideAnim = useRef(new Animated.Value(80)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -39,21 +63,23 @@ export default function HostGame() {
         // Get connection mode
         const mode = await getConnectionMode();
         setConnectionModeState(mode);
-        
+
         // Get device IP first
         setIpLoading(true);
         const ip = await getDeviceIPv4();
         setDeviceIP(ip);
-        
+
         setIpLoading(false);
-        
+
         // Force cleanup any existing server before starting
-        console.log('[HostGame] Initializing - cleaning up any existing server');
+        console.log(
+          "[HostGame] Initializing - cleaning up any existing server",
+        );
         forceCleanup();
-        
+
         // Wait a bit, then start the server
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         startServer({ username, mode, time, variant });
         setConnectionError(null);
       } catch (error) {
@@ -62,11 +88,11 @@ export default function HostGame() {
         setIpLoading(false);
       }
     };
-    
+
     initConnection();
-    
+
     return () => {
-      console.log('[HostGame] Unmounting - stopping server');
+      console.log("[HostGame] Unmounting - stopping server");
       stopServer();
     };
   }, []);
@@ -104,14 +130,25 @@ export default function HostGame() {
     }
     stopServer();
     Animated.parallel([
-      Animated.timing(slideAnim, { toValue: 80, duration: 260, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+      Animated.timing(slideAnim, {
+        toValue: 80,
+        duration: 260,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
     ]).start(() => navigation.goBack());
   };
 
   const handleStart = () => {
     startLocalGame(flipped);
-    console.log("[HostGame] Navigating to GameRoom with Chess960 FEN:", chess960Fen);
+    console.log(
+      "[HostGame] Navigating to GameRoom with Chess960 FEN:",
+      chess960Fen,
+    );
     navigation.navigate("GameRoom", {
       mode,
       time,
@@ -141,7 +178,7 @@ export default function HostGame() {
 
       {/* Badges Row */}
       <View style={styles.badgesContainer}>
-        {variant === 'chess960' && (
+        {variant === "chess960" && (
           <View style={styles.variantBadge}>
             <MaterialIcons name="shuffle" size={14} color="#7b5a3a" />
             <Text style={styles.variantText}>Chess960</Text>
@@ -225,7 +262,7 @@ export default function HostGame() {
         {roomCode && (
           <View style={styles.codeBox}>
             <Text style={styles.shareHeader}>Share with your opponent:</Text>
-            
+
             {/* Room Code */}
             <View style={styles.infoRow}>
               <View style={styles.infoContent}>
@@ -237,20 +274,13 @@ export default function HostGame() {
             {/* IP Address */}
             <View style={styles.infoRow}>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>
-                  {connectionMode === 'hotspot' ? 'Your IP — share with opponent' : 'Your IP'}
-                </Text>
+                <Text style={styles.infoLabel}>Your IP Address</Text>
                 {ipLoading ? (
                   <ActivityIndicator color="white" size="small" />
                 ) : deviceIP ? (
                   <Text style={styles.infoValue}>{deviceIP}</Text>
                 ) : (
                   <Text style={styles.ipError}>Unable to detect IP</Text>
-                )}
-                {!ipLoading && connectionMode === 'hotspot' && (
-                  <Text style={styles.ipShareHint}>
-                    Tell your opponent this IP so they can join
-                  </Text>
                 )}
               </View>
             </View>
@@ -263,7 +293,7 @@ export default function HostGame() {
                 </View>
                 {/* IP Configuration Reminder */}
                 <View style={styles.ipReminderWrapper}>
-                  {connectionMode === 'hotspot' ? (
+                  {connectionMode === "hotspot" ? (
                     <HotspotConfigReminder variant="host" />
                   ) : (
                     <WifiConfigReminder variant="host" />
@@ -287,7 +317,8 @@ export default function HostGame() {
             <MaterialIcons name="refresh" size={32} color="#ffa500" />
             <Text style={styles.restartTitle}>App Restart Required</Text>
             <Text style={styles.restartText}>
-              The network port is stuck at the system level. Please close and reopen the app completely.
+              The network port is stuck at the system level. Please close and
+              reopen the app completely.
             </Text>
             <Text style={styles.restartHint}>
               (This happens after hot reloads in development)
@@ -306,7 +337,7 @@ export default function HostGame() {
           </Pressable>
         )}
       </Animated.View>
-      
+
       <ChessLANFooter />
     </SafeAreaView>
   );

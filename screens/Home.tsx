@@ -141,7 +141,11 @@ export default function Home() {
           >
             <View style={styles.modeButtonLeft}>
               <View style={styles.modeIconContainer}>
-                <MaterialIcons name="settings-input-antenna" size={24} color="#69923e" />
+                <MaterialIcons
+                  name="settings-input-antenna"
+                  size={24}
+                  color="#69923e"
+                />
               </View>
               <View style={styles.modeTextContainer}>
                 <Text style={styles.modeButtonTitle}>Phone Hotspot</Text>
@@ -155,7 +159,7 @@ export default function Home() {
         </View>
       </View>
 
-      <ChessLANFooter version="2.0.1" />
+      <ChessLANFooter version="2.0.2" />
 
       {/* About Modal */}
       <Modal visible={aboutVisible} transparent animationType="fade">
@@ -167,11 +171,22 @@ export default function Home() {
             style={styles.aboutModalBox}
             onPress={(e) => e.stopPropagation()}
           >
-            <View style={styles.aboutHeader}>
-              <MaterialIcons name="info" size={48} color="#1e6b40" />
+            <View style={styles.aboutBanner}>
+              <View style={styles.aboutBannerCircle}>
+                <Rook width={84} height={84} />
+              </View>
             </View>
+            <Pressable
+              style={styles.aboutCloseBtn}
+              onPress={() => setAboutVisible(false)}
+              hitSlop={8}
+            >
+              <MaterialIcons name="close" size={22} color="#666" />
+            </Pressable>
             <Text style={styles.aboutTitle}>ChessLAN</Text>
-            <Text style={styles.aboutVersion}>Version 2.0.1</Text>
+            <View style={styles.aboutVersionPill}>
+              <Text style={styles.aboutVersion}>Version 2.0.2</Text>
+            </View>
             <View style={styles.aboutDivider} />
             <Text style={styles.aboutLabel}>Created by</Text>
             <Text style={styles.aboutCreator}>Lee Johnrich H. Ramirez</Text>
@@ -180,7 +195,8 @@ export default function Home() {
               Cavite State University - Main
             </Text>
             <Text style={styles.aboutDescription}>
-              Play chess anytime, anywhere with friends over local WiFi or phone hotspot.
+              Play chess anytime, anywhere with friends over local WiFi or phone
+              hotspot.
             </Text>
           </Pressable>
         </Pressable>
@@ -332,29 +348,67 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 24,
     marginHorizontal: 32,
-    paddingVertical: 36,
+    paddingBottom: 32,
     paddingHorizontal: 28,
     alignItems: "center",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  aboutBanner: {
+    alignSelf: "stretch",
+    marginHorizontal: -28,
+    marginBottom: 24,
+    backgroundColor: "#69923e",
+    height: 148,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  aboutBannerCircle: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    backgroundColor: "#ddeacc",
+    alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  aboutHeader: {
-    marginBottom: 16,
+  aboutCloseBtn: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
   },
   aboutTitle: {
     fontFamily: "GoogleSansFlex_700Bold",
     fontSize: 26,
     color: "#2c2b29",
-    marginBottom: 4,
+    marginBottom: 10,
+  },
+  aboutVersionPill: {
+    backgroundColor: "#ddeacc",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    marginBottom: 22,
   },
   aboutVersion: {
-    fontFamily: "GoogleSansFlex_400Regular",
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 20,
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 13,
+    color: "#1e6b40",
   },
   aboutDivider: {
     width: "100%",

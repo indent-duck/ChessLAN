@@ -15,16 +15,15 @@ export default function HotspotConfigReminder({
         <Text style={styles.reminderTitle}>Important Reminder</Text>
         {variant === "host" ? (
           <Text style={styles.reminderText}>
-            • You should be connected to you're opponent's hotspot in order to
-            host a game
-            {"\n"}• Share your IP and room code with your opponent
+            • You should be connected to your opponent's Hotspot befoe hosting a
+            game
+            {"\n"}• Share your IP address and room code with your opponent
           </Text>
         ) : (
           <Text style={styles.reminderText}>
             • Make sure that your hotspot is turned on and that your opponent is
             connected to it{"\n"}• Ask the host for their IP address{"\n"}• Use
             "Configure Host IP" button to set it
-            {"\n"}• Enter only IP (e.g., 192.168.1.100), not full URL
           </Text>
         )}
       </View>

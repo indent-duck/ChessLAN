@@ -4,7 +4,7 @@ interface ChessLANFooterProps {
   version?: string;
 }
 
-export default function ChessLANFooter({ version = "2.0.1" }: ChessLANFooterProps) {
+export default function ChessLANFooter({ version = "2.0.2" }: ChessLANFooterProps) {
   return (
     <View style={styles.footer}>
       <Text style={styles.footerText}>ChessLAN v{version}</Text>
