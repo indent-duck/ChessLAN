@@ -16,6 +16,11 @@ import {
   getConnectionStatusText,
 } from "../utils/networkUtils";
 
+const isUnreachableIP = (ip: string): boolean => {
+  if (!ip) return false;
+  return ip === "0.0.0.0" || ip.startsWith("127.");
+};
+
 interface IPConfigModalProps {
   visible: boolean;
   onClose: () => void;
@@ -57,7 +62,7 @@ export default function IPConfigModal({
   }, [visible]);
 
   const handleSave = () => {
-    if (!validateIPFormat(ipInput)) {
+    if (!validateIPFormat(ipInput) || isUnreachableIP(ipInput)) {
       return;
     }
 
@@ -83,7 +88,7 @@ export default function IPConfigModal({
     });
   };
 
-  const isValid = validateIPFormat(ipInput);
+  const isValid = validateIPFormat(ipInput) && !isUnreachableIP(ipInput);
   const hasLastSaved = currentIP && currentIP !== ipInput;
 
   const slideTranslate = slideAnim.interpolate({
@@ -136,7 +141,7 @@ export default function IPConfigModal({
               >
                 <Text style={styles.description}>
                   {mode === "hotspot"
-                    ? "Enter the host's hotspot IP address\n(Host should turn ON their hotspot first)"
+                    ? "Enter the host's IP address\n(It's shown on the host's screen)"
                     : "Enter the host's IP address\n(Get this from the host device)"}
                 </Text>
 
@@ -156,7 +161,11 @@ export default function IPConfigModal({
                 />
 
                 {!isValid && ipInput.length > 0 && (
-                  <Text style={styles.errorText}>Invalid IP format</Text>
+                  <Text style={styles.errorText}>
+                    {isUnreachableIP(ipInput)
+                      ? "0.0.0.0 / 127.x.x.x IPs aren't reachable"
+                      : "Invalid IP format"}
+                  </Text>
                 )}
 
                 <View style={styles.infoBox}>

@@ -14,12 +14,13 @@ import { useEffect, useRef, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useLocalClient } from "../hooks/useLocalClient";
 import ChessLANFooter from "../components/ChessLANFooter";
-import IPConfigReminder from "../components/IPConfigReminder";
+import WifiConfigReminder from "../components/WifiConfigReminder";
+import HotspotConfigReminder from "../components/HotspotConfigReminder";
 
 export default function JoinGame() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const route = useRoute<any>();
-  const { username } = route.params ?? { username: "" };
+  const { username, connectionMode } = route.params ?? { username: "", connectionMode: undefined };
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
@@ -303,7 +304,11 @@ export default function JoinGame() {
       {/* IP Configuration Reminder */}
       {!joined && (
         <View style={styles.reminderContainer}>
-          <IPConfigReminder variant="guest" />
+          {connectionMode === "hotspot" ? (
+            <HotspotConfigReminder variant="guest" />
+          ) : (
+            <WifiConfigReminder variant="guest" />
+          )}
         </View>
       )}
       

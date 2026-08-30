@@ -6,8 +6,9 @@ import { useEffect, useRef, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useLocalServer } from "../hooks/useLocalServer";
 import ChessLANFooter from "../components/ChessLANFooter";
-import IPConfigReminder from "../components/IPConfigReminder";
-import { getDeviceIPv4, isHotspotActive } from "../utils/networkUtils";
+import WifiConfigReminder from "../components/WifiConfigReminder";
+import HotspotConfigReminder from "../components/HotspotConfigReminder";
+import { getDeviceIPv4 } from "../utils/networkUtils";
 import { getServerIP, getConnectionMode } from "../config";
 
 export default function HostGame() {
@@ -24,7 +25,6 @@ export default function HostGame() {
   const [deviceIP, setDeviceIP] = useState<string | null>(null);
   const [configuredIP, setConfiguredIP] = useState<string | null>(null);
   const [ipLoading, setIpLoading] = useState(true);
-  const [hotspotActive, setHotspotActive] = useState<boolean | null>(null);
   const [connectionMode, setConnectionModeState] = useState<'wifi' | 'hotspot'>('wifi');
 
   const localServer = useLocalServer();
@@ -44,12 +44,6 @@ export default function HostGame() {
         setIpLoading(true);
         const ip = await getDeviceIPv4();
         setDeviceIP(ip);
-        
-        // Check if hotspot is active (for hotspot mode)
-        if (mode === 'hotspot') {
-          const isActive = await isHotspotActive();
-          setHotspotActive(isActive);
-        }
         
         setIpLoading(false);
         
@@ -243,7 +237,9 @@ export default function HostGame() {
             {/* IP Address */}
             <View style={styles.infoRow}>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Your IP</Text>
+                <Text style={styles.infoLabel}>
+                  {connectionMode === 'hotspot' ? 'Your IP — share with opponent' : 'Your IP'}
+                </Text>
                 {ipLoading ? (
                   <ActivityIndicator color="white" size="small" />
                 ) : deviceIP ? (
@@ -251,18 +247,13 @@ export default function HostGame() {
                 ) : (
                   <Text style={styles.ipError}>Unable to detect IP</Text>
                 )}
+                {!ipLoading && connectionMode === 'hotspot' && (
+                  <Text style={styles.ipShareHint}>
+                    Tell your opponent this IP so they can join
+                  </Text>
+                )}
               </View>
             </View>
-
-            {/* Hotspot Active Confirmation */}
-            {!ipLoading && connectionMode === 'hotspot' && hotspotActive === true && (
-              <View style={styles.hotspotActiveBox}>
-                <MaterialIcons name="check-circle" size={16} color="#10b981" />
-                <Text style={styles.hotspotActiveText}>
-                  Hotspot detected and active
-                </Text>
-              </View>
-            )}
 
             {!opponentName && (
               <>
@@ -272,7 +263,11 @@ export default function HostGame() {
                 </View>
                 {/* IP Configuration Reminder */}
                 <View style={styles.ipReminderWrapper}>
-                  <IPConfigReminder variant="host" mode={connectionMode} />
+                  {connectionMode === 'hotspot' ? (
+                    <HotspotConfigReminder variant="host" />
+                  ) : (
+                    <WifiConfigReminder variant="host" />
+                  )}
                 </View>
               </>
             )}
@@ -494,6 +489,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "rgba(255,107,107,0.9)",
   },
+  ipShareHint: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 6,
+    textAlign: "center",
+    lineHeight: 15,
+  },
   ipMismatchWarning: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -509,20 +512,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "rgba(255,255,255,0.8)",
     lineHeight: 15,
-  },
-  hotspotActiveBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(16, 185, 129, 0.15)",
-    borderRadius: 10,
-    padding: 8,
-    justifyContent: "center",
-  },
-  hotspotActiveText: {
-    fontFamily: "GoogleSansFlex_500Medium",
-    fontSize: 11,
-    color: "#10b981",
   },
   waitingRow: {
     flexDirection: "row",

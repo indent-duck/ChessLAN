@@ -20,6 +20,13 @@ A React Native (Expo ~54) mobile chess app for **true local network multiplayer*
 4. **Guest phone** connects to host via TCP socket
 5. Both phones exchange game messages directly over local WiFi
 
+### Hotspot Mode Role Convention:
+Hotspot mode uses **fixed in-app roles** to avoid the "can't host a hotspot" problem:
+- The **Host** (in-app) is the phone that **connects to the opponent's hotspot** — it gets a real DHCP IP from the hotspot, which the app can display and share.
+- The **Guest** (in-app) is the phone that **turns its hotspot ON** — a hotspot owner's device reports `0.0.0.0` via `expo-network` (it has no WiFi-client address), so it can never reliably self-report an IP.
+- This convention is the intentional design: either role technically could play over either network type, but the app keeps WiFi and Hotspot as separate modes (with separate IP storage) and gives role-specific reminders so users don't get confused.
+- UI enforces the convention: `HomeHotspot`, `HotspotConfigReminder`, and `InstructionsModal` (hotspot mode) all tell the host to be the one connected to the hotspot and the guest to keep the hotspot ON.
+
 ### Key Files:
 - `hooks/useLocalServer.ts` - Embedded TCP server for host (React Native)
 - `hooks/useLocalClient.ts` - TCP client for guest
@@ -46,7 +53,7 @@ CustomTime (Custom mode) → HostGame
 ### Home (`screens/Home.tsx`)
 - **Simplified entry point** - Username setup and About button only
 - Username stored in AsyncStorage, editable with inline TextInput + check/edit icon
-- Two mode buttons navigate directly to HomeWiFi or HomeHotspot
+- Two mode buttons navigate directly to HomeWiFi or HomeHotspot (Hotspot button subtitle: "Play over a phone hotspot")
 - Footer shows "ChessLAN v2.0.1"
 - No game mode selection here (moved to HomeWiFi/HomeHotspot)
 
@@ -69,12 +76,13 @@ CustomTime (Custom mode) → HostGame
 - Game mode carousel (Rapid, Blitz, Bullet, Custom) - same layout as HomeWiFi
 - **Guest section:**
   - IP status display (configured with checkmark or warning)
+  - **Unreachable-IP guard:** `0.0.0.0` / `127.x.x.x` saved IPs are detected as unreachable (a hotspot owner's IP) and flagged as a warning
   - "Configure Host IP" button opens IPConfigModal
   - "Join with Room Code" button navigates to JoinGame
 - **Host section:**
   - "Host [Mode] Game" button navigates to HostGame or CustomTime
 - Separate IP storage from WiFi mode (`HOTSPOT_SERVER_IP`)
-- Sets connection mode to 'hotspot' on mount
+- Sets connection mode to 'hotspot' on mount and passes `connectionMode: "hotspot"` through navigation so HostGame/JoinGame render hotspot-specific guidance
 
 ### IPConfigModal (`components/IPConfigModal.tsx`)
 - **Modal for IP configuration** - Slides up from bottom
@@ -84,6 +92,7 @@ CustomTime (Custom mode) → HostGame
 - Pre-fills with last saved IP for current mode
 - Shows "Last saved" IP at bottom with restore option
 - **Hotspot mode:** shows expected hotspot IP hint with a one-tap quick-set button
+- **Unreachable-IP guard:** refuses/suggests against `0.0.0.0` and `127.x.x.x` addresses ("0.0.0.0 / 127.x.x.x IPs aren't reachable") — these appear when the person running the modal is a hotspot owner
 - Success animation (green checkmark) on save
 - Auto-closes after successful save
 
@@ -97,6 +106,8 @@ CustomTime (Custom mode) → HostGame
   - Room Code with copy button
   - Your IP with copy button  
   - Hint: "Share both to your opponent"
+- **Hotspot mode:** IP label becomes "Your IP — share with opponent" with caption "Tell your opponent this IP so they can join"
+- **Mode-aware reminder:** shows `HotspotConfigReminder variant="host"` in hotspot mode, `WifiConfigReminder variant="host"` in WiFi mode (while waiting for opponent)
 - `flipped` state toggles which color the host plays
 - Waits for guest to join
 - Shows opponent username when guest connects
@@ -111,6 +122,7 @@ CustomTime (Custom mode) → HostGame
 - Uses IP from current connection mode (WiFi or Hotspot) configured via modal
 - Join button disabled until 4 chars entered
 - Shows error feedback for invalid codes or connection failures
+- **Mode-aware reminder:** shows `HotspotConfigReminder variant="guest"` in hotspot mode, `WifiConfigReminder variant="guest"` in WiFi mode (before joining)
 - Receives game info from host (mode, time, variant)
 - Waits for host to start game
 
@@ -142,6 +154,25 @@ CustomTime (Custom mode) → HostGame
 - Card in the Home carousel
 - Tapping the selected mode hosts that game (Custom opens CustomTime)
 
+### InstructionsModal (`components/InstructionsModal.tsx`)
+- Modal explaining how to use the app, opened from the home lobbies
+- Host/Guest tabs with role-specific numbered steps
+- **Hotspot mode steps:** host step 1 = "Connect to your opponent's hotspot so your phone has an IP address"; guest step 1 = "Turn on your phone's mobile hotspot"
+- **Important Reminder box** (hotspot mode only, below the steps):
+  - The **Guest** should turn their **Hotspot On**
+  - The **Host** should **connect to the opponent's Hotspot**
+
+### WifiConfigReminder (`components/WifiConfigReminder.tsx`)
+- Mode-aware reminder shown on HostGame (variant="host") and JoinGame (variant="guest") when connection mode is `wifi`
+- Host copy: find device IP in WiFi settings, share IP + room code, both devices on same network
+- Guest copy: ask the host for their IP, use "Configure Host IP", enter numbers only
+
+### HotspotConfigReminder (`components/HotspotConfigReminder.tsx`)
+- Mode-aware reminder shown on HostGame (variant="host") and JoinGame (variant="guest") when connection mode is `hotspot`
+- Host copy: connect to your opponent's hotspot to host, share your IP + room code
+- Guest copy: keep your hotspot ON so your opponent can connect, ask the host for their IP, configure via modal (numbers only)
+- Replaces the old `IPConfigReminder.tsx` (deleted) with these two mode-specific components
+
 ## What's NOT done yet
 - Auto-detection of host IP for guests (currently manual entry via modal)
 - Reconnection handling if connection drops mid-game
@@ -168,6 +199,10 @@ CustomTime (Custom mode) → HostGame
 - Guest connects to host via TCP socket
 - **Dual connection modes:** WiFi Network and Phone Hotspot
 - **Connection mode selection screen** with clear descriptions
+- **Hotspot mode role convention:** guest keeps the hotspot ON, host connects to the opponent's hotspot (so the host always has a shareable IP)
+- **Role-aware reminders:** `HotspotConfigReminder` / `WifiConfigReminder` shown on HostGame and JoinGame based on connection mode
+- **InstructionsModal Important Reminder** (hotspot mode) with bolded role guidance for Guest (Hotspot On) and Host (connect to opponent's hotspot)
+- **Unreachable-IP guard:** `0.0.0.0` / `127.x.x.x` IPs flagged as unreachable in HomeHotspot and IPConfigModal (prevents saving a hotspot owner's useless address)
 - **Automatic IPv4 detection and display** on host screen
 - **IPv6 filtering** - only shows IPv4 addresses
 - **Simplified IP configuration** via modal (no ws:// or :3001 required)

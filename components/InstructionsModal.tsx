@@ -1,11 +1,5 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Pressable,
-} from "react-native";
+import { View, Text, StyleSheet, Modal, Pressable } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
 type RoleType = "host" | "guest";
@@ -26,14 +20,14 @@ export default function InstructionsModal({
   const hostSteps =
     mode === "hotspot"
       ? [
-          "Turn on your phone's mobile hotspot",
-          "Share network name and password with your opponent",
-          "Select a game mode and tap \"Host Game\"",
-          "On the host screen, share the room code shown with your opponent and wait for them to join",
+          "Connect to your opponent's hotspot so your phone has an IP address",
+          'Select a game mode and tap "Host Game"',
+          "On the host screen, share your IP and room code with your opponent",
+          "Wait for your opponent to join",
         ]
       : [
           "Make sure both devices are connected to the same WiFi network",
-          "Select a game mode and tap \"Host Game\"",
+          'Select a game mode and tap "Host Game"',
           "Share the room code with your opponent",
           "Wait for your opponent to join",
         ];
@@ -41,15 +35,15 @@ export default function InstructionsModal({
   const guestSteps =
     mode === "hotspot"
       ? [
-          "Connect to the host's mobile hotspot",
-          "Tap \"Configure Host IP\" and enter the host's IP address",
-          "Tap \"Join with Room Code\"",
-          "Enter the room code provided by the host",
+          "Turn on your phone's mobile hotspot",
+          "Share the network name and password with your opponent",
+          'Tap "Configure Host IP" and enter the IP shown on the host\'s screen',
+          'Tap "Join with Room Code" and enter the host\'s room code',
         ]
       : [
           "Connect to the same WiFi network as the host",
-          "Tap \"Configure Host IP\" and enter the host's IP address",
-          "Tap \"Join with Room Code\"",
+          'Tap "Configure Host IP" and enter the host\'s IP address',
+          'Tap "Join with Room Code"',
           "Enter the room code provided by the host",
         ];
 
@@ -72,10 +66,7 @@ export default function InstructionsModal({
           {/* Tab Selector */}
           <View style={styles.tabContainer}>
             <Pressable
-              style={[
-                styles.tab,
-                selectedRole === "host" && styles.tabActive,
-              ]}
+              style={[styles.tab, selectedRole === "host" && styles.tabActive]}
               onPress={() => setSelectedRole("host")}
             >
               <MaterialIcons
@@ -93,10 +84,7 @@ export default function InstructionsModal({
               </Text>
             </Pressable>
             <Pressable
-              style={[
-                styles.tab,
-                selectedRole === "guest" && styles.tabActive,
-              ]}
+              style={[styles.tab, selectedRole === "guest" && styles.tabActive]}
               onPress={() => setSelectedRole("guest")}
             >
               <MaterialIcons
@@ -138,6 +126,39 @@ export default function InstructionsModal({
               </View>
             </View>
           </View>
+
+          {/* Important Reminder (hotspot mode) */}
+          {mode === "hotspot" && (
+            <View style={styles.importantReminderBox}>
+              <View style={styles.importantReminderHeader}>
+                <MaterialIcons name="warning" size={18} color="#f59e0b" />
+                <Text style={styles.importantReminderTitle}>
+                  Important Reminder
+                </Text>
+              </View>
+              <View style={styles.importantReminderItem}>
+                <Text style={styles.importantBullet}>•</Text>
+                <Text style={styles.importantReminderText}>
+                  The{" "}
+                  <Text style={styles.importantReminderTextBold}>Guest</Text>{" "}
+                  should turn their{" "}
+                  <Text style={styles.importantReminderTextBold}>
+                    Hotspot On
+                  </Text>
+                </Text>
+              </View>
+              <View style={styles.importantReminderItem}>
+                <Text style={styles.importantBullet}>•</Text>
+                <Text style={styles.importantReminderText}>
+                  The <Text style={styles.importantReminderTextBold}>Host</Text>{" "}
+                  should{" "}
+                  <Text style={styles.importantReminderTextBold}>
+                    connect to the opponent's Hotspot
+                  </Text>
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* Close Button */}
           <Pressable style={styles.closeButton} onPress={onClose}>
@@ -246,6 +267,49 @@ const styles = StyleSheet.create({
   },
   roleSteps: {
     gap: 14,
+  },
+  importantReminderBox: {
+    backgroundColor: "#fffbeb",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+    marginBottom: 24,
+  },
+  importantReminderHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  importantReminderTitle: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 14,
+    color: "#b45309",
+  },
+  importantReminderItem: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+    marginBottom: 6,
+  },
+  importantBullet: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 14,
+    color: "#b45309",
+    lineHeight: 20,
+  },
+  importantReminderText: {
+    flex: 1,
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 13,
+    color: "#78350f",
+    lineHeight: 20,
+  },
+  importantReminderTextBold: {
+    fontFamily: "GoogleSansFlex_700Bold",
+    fontSize: 13,
+    color: "#78350f",
   },
   stepItem: {
     flexDirection: "row",

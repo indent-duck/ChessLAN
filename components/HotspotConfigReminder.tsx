@@ -1,30 +1,30 @@
 import { View, Text, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
-interface IPConfigReminderProps {
+interface HotspotConfigReminderProps {
   variant: "host" | "guest";
-  mode?: "wifi" | "hotspot";
 }
 
-export default function IPConfigReminder({ variant, mode = "wifi" }: IPConfigReminderProps) {
+export default function HotspotConfigReminder({
+  variant,
+}: HotspotConfigReminderProps) {
   return (
     <View style={styles.reminderBox}>
       <MaterialIcons name="info-outline" size={16} color="#69923e" />
       <View style={styles.reminderContent}>
-        <Text style={styles.reminderTitle}>Network Configuration Required</Text>
+        <Text style={styles.reminderTitle}>Important Reminder</Text>
         {variant === "host" ? (
           <Text style={styles.reminderText}>
-            • Find your device IP in WiFi/Hotspot settings{'\n'}
-            • Share your IP and room code with your opponent{'\n'}
-            {mode === "hotspot"
-              ? "• Guest must connect to your hotspot network"
-              : "• Both devices must be on the same network"}
+            • You should be connected to you're opponent's hotspot in order to
+            host a game
+            {"\n"}• Share your IP and room code with your opponent
           </Text>
         ) : (
           <Text style={styles.reminderText}>
-            • Ask the host for their IP address{'\n'}
-            • Use "Configure Host IP" button to set it{'\n'}
-            • Enter only IP (e.g., 192.168.1.100), not full URL
+            • Make sure that your hotspot is turned on and that your opponent is
+            connected to it{"\n"}• Ask the host for their IP address{"\n"}• Use
+            "Configure Host IP" button to set it
+            {"\n"}• Enter only IP (e.g., 192.168.1.100), not full URL
           </Text>
         )}
       </View>

@@ -29,6 +29,11 @@ import InstructionsModal from "../components/InstructionsModal";
 const CARD_WIDTH = 260;
 const CARD_GAP = 16;
 
+const ipIsUnreachable = (ip: string | null): boolean => {
+  if (!ip) return false;
+  return ip === "0.0.0.0" || ip.startsWith("127.");
+};
+
 const gameModes = [
   { id: "rapid", icon: Rapid, title: "Rapid", time: "10 min" },
   { id: "blitz", icon: King, title: "Blitz", time: "5 min" },
@@ -57,7 +62,7 @@ export default function HomeHotspot() {
 
   useEffect(() => {
     // Set connection mode to Hotspot when this screen loads
-    setConnectionMode('hotspot');
+    setConnectionMode("hotspot");
 
     AsyncStorage.getItem("Player").then((val) => {
       if (val) setUsername(val);
@@ -66,7 +71,7 @@ export default function HomeHotspot() {
   }, []);
 
   const loadHostIP = async () => {
-    const ip = await getServerIP('hotspot');
+    const ip = await getServerIP("hotspot");
     setHostIP(ip);
   };
 
@@ -107,7 +112,7 @@ export default function HomeHotspot() {
   };
 
   const handleSaveIP = async (ip: string) => {
-    await setServerIP(ip, 'hotspot');
+    await setServerIP(ip, "hotspot");
     setHostIP(ip);
   };
 
@@ -140,12 +145,20 @@ export default function HomeHotspot() {
 
           {/* Centered Mode Banner */}
           <View style={styles.modeBanner}>
-            <MaterialIcons name="settings-input-antenna" size={20} color="#69923e" />
+            <MaterialIcons
+              name="settings-input-antenna"
+              size={20}
+              color="#69923e"
+            />
             <Text style={styles.modeBannerText}>Hotspot Mode</Text>
           </View>
 
           {/* Info Button */}
-          <Pressable onPress={() => setInstructionsVisible(true)} style={styles.infoButton} hitSlop={8}>
+          <Pressable
+            onPress={() => setInstructionsVisible(true)}
+            style={styles.infoButton}
+            hitSlop={8}
+          >
             <MaterialIcons name="info-outline" size={24} color="#69923e" />
           </Pressable>
         </View>
@@ -229,7 +242,14 @@ export default function HomeHotspot() {
         {/* Guest Section */}
         <View style={styles.guestSection}>
           {/* IP Status */}
-          {hostIP ? (
+          {hostIP && ipIsUnreachable(hostIP) ? (
+            <View style={styles.ipStatusWarning}>
+              <MaterialIcons name="warning" size={16} color="#f59e0b" />
+              <Text style={styles.ipStatusWarningText}>
+                Current: {hostIP} — not reachable, re-configure
+              </Text>
+            </View>
+          ) : hostIP ? (
             <View style={styles.ipStatusConfigured}>
               <MaterialIcons name="check-circle" size={16} color="#10b981" />
               <Text style={styles.ipStatusText}>Current: {hostIP}</Text>
@@ -237,7 +257,9 @@ export default function HomeHotspot() {
           ) : (
             <View style={styles.ipStatusWarning}>
               <MaterialIcons name="warning" size={16} color="#f59e0b" />
-              <Text style={styles.ipStatusWarningText}>Configure IP before joining</Text>
+              <Text style={styles.ipStatusWarningText}>
+                Configure IP before joining
+              </Text>
             </View>
           )}
 
@@ -262,7 +284,12 @@ export default function HomeHotspot() {
               styles.joinBtn,
               { opacity: pressed ? 0.85 : 1 },
             ]}
-            onPress={() => navigation.navigate("JoinGame", { username })}
+            onPress={() =>
+              navigation.navigate("JoinGame", {
+                username,
+                connectionMode: "hotspot",
+              })
+            }
           >
             <View style={styles.actionBtnContent}>
               <MaterialIcons name="login" size={20} color="#1e6b40" />
@@ -534,6 +561,13 @@ const styles = StyleSheet.create({
     fontFamily: "GoogleSansFlex_500Medium",
     fontSize: 13,
     color: "#f59e0b",
+  },
+  hotspotHintText: {
+    fontFamily: "GoogleSansFlex_400Regular",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.75)",
+    textAlign: "center",
+    lineHeight: 16,
   },
   configBtn: {
     flexDirection: "row",

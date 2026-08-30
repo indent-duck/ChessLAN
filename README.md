@@ -28,6 +28,7 @@ A React Native chess app for **true local network multiplayer** - play chess wit
 - **Free hosting** - no server costs
 - **Automatic IP display** - host's IP shown automatically
 - **Simplified setup** - just enter IP numbers, no complex URLs
+- **Role-aware setup (Hotspot mode)** - the guest keeps their hotspot ON and the host connects to it, so the host always gets a real IP to share (a hotspot owner's phone reports `0.0.0.0`, which can't be used to join)
 
 ### User Experience
 
@@ -60,12 +61,15 @@ A React Native chess app for **true local network multiplayer** - play chess wit
 ┌─────────────────────┐         ┌─────────────────────┐
 │   Host Phone        │         │   Guest Phone       │
 │                     │         │                     │
-│  Hotspot Active     │◄───────►│  Connected to       │
-│  TCP Server :3001   │ Hotspot │  Host's Hotspot     │
+│  Connected to       │◄───────►│  Hotspot Active     │
+│  Guest's Hotspot    │ Hotspot │  TCP Client         │
+│  TCP Server :3001   │         │                     │
 │  Room Code: AB12    │         │                     │
-│  IP: 192.168.43.1   │         │                     │
+│  IP: 192.168.43.x   │         │                     │
 └─────────────────────┘         └─────────────────────┘
 ```
+
+> **Design note:** The developer is aware that either in-app role (host or guest) could technically work over either a WiFi network **or** a phone hotspot. The two modes are intentionally kept separate — assigning fixed roles per mode reduces confusion and lets the app give clear, role-specific instructions. Specifically, in Hotspot mode the phone that *turns on the hotspot* cannot read a usable IP address (it reports `0.0.0.0`), so the **host** should be the phone that *connects to the opponent's hotspot* and the **guest** is the one that keeps its hotspot turned on.
 
 **Setup Steps:**
 
@@ -140,11 +144,11 @@ eas build --platform ios --profile preview
 **Quick Start (Hotspot Mode):**
 
 1. Install ChessLAN on 2 phones
-2. Host turns on phone hotspot
-3. Guest connects to host's hotspot in phone settings
+2. **Guest** turns on their phone hotspot (this is deliberate - see the design note above)
+3. **Host** connects to the guest's hotspot in phone settings
 4. Both select "Phone Hotspot" mode
 5. Host creates game, sees room code and IP
-6. Guest configures host's hotspot IP (usually 192.168.43.1 or 172.20.10.1)
+6. Guest configures the host's IP (just the numbers shown on the host's screen)
 7. Guest joins with room code
 8. Play chess
 
@@ -158,6 +162,9 @@ See [PROJECT.md](PROJECT.md) for architecture details.
 - `screens/HomeWiFi.tsx` - WiFi mode lobby
 - `screens/HomeHotspot.tsx` - Hotspot mode lobby
 - `components/IPConfigModal.tsx` - IP configuration modal
+- `components/InstructionsModal.tsx` - Role-specific steps (Host/Guest) with an Important Reminder for hotspot mode
+- `components/WifiConfigReminder.tsx` - Network reminders for WiFi mode
+- `components/HotspotConfigReminder.tsx` - Role-aware reminders for hotspot mode
 - `utils/networkUtils.ts` - Network utility functions
 - `hooks/useLocalServer.ts` - Embedded TCP server (host)
 - `hooks/useLocalClient.ts` - TCP client (guest)
@@ -265,16 +272,18 @@ These are inherent to the peer-to-peer architecture and prioritize privacy/local
 
 - Ensure both phones selected the same connection mode
 - **WiFi Mode:** Both phones must be on same WiFi network
-- **Hotspot Mode:** Guest must be connected to host's hotspot
+- **Hotspot Mode:** The *guest* turns their hotspot ON and the *host* connects to it (the hotspot owner's IP is `0.0.0.0` and can't be used to join)
 - Verify host's IP address is correct (format: 192.168.1.100)
 - Check firewall not blocking port 3001
 - Ensure host has started hosting before guest tries to join
 
 ### "Unable to detect IP" on Host Screen
 
+- The app hides the IP field if your phone is the hotspot owner (`0.0.0.0` / `127.x.x.x` addresses are marked unreachable)
+- In Hotspot mode, the host should be connected to the opponent's hotspot, not creating its own
 - Check your network connection
 - The app filters out IPv6 addresses (starting with 2001:, fe80:, etc.)
-- Make sure you're connected to WiFi or have hotspot enabled
+- Make sure you're connected to WiFi or the opponent's hotspot
 - Try toggling WiFi/hotspot off and on
 
 ### "Room not found"

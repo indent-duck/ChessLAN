@@ -146,7 +146,7 @@ export default function Home() {
               <View style={styles.modeTextContainer}>
                 <Text style={styles.modeButtonTitle}>Phone Hotspot</Text>
                 <Text style={styles.modeButtonSubtitle}>
-                  Host creates hotspot connection
+                  Play over a phone hotspot
                 </Text>
               </View>
             </View>

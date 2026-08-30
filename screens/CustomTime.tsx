@@ -126,7 +126,7 @@ export default function CustomTime() {
           <View style={styles.infoBox}>
             <MaterialIcons name="info-outline" size={16} color="#ddeacc" />
             <Text style={styles.infoText}>
-              Configure Host IP on the lobby screen before hosting
+              After hosting, share the IP shown on your screen with your opponent
             </Text>
           </View>
 
