@@ -454,11 +454,7 @@ export function useLocalServer() {
     };
   };
 
-  useEffect(() => {
-    return () => {
-      forceCleanup();
-    };
-  }, []);
+
 
   return {
     isRunning,
