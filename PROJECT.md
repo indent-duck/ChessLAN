@@ -240,11 +240,21 @@ eas build --profile development --platform android
 npx expo start --dev-client
 ```
 
+**Using Docker:**
+
+```bash
+# Set your LAN IP in docker-compose.yml, then:
+docker compose up --build
+```
+
+Set `REACT_NATIVE_PACKAGER_HOSTNAME` in `docker-compose.yml` to your host machine's LAN IP so Metro advertises a reachable address to the phone.
+
 **Benefits:**
 - Fast iteration with hot reload
 - Console logs visible
 - Native modules included
 - Real device testing
+- Reproducible dev environment via Docker
 
 ### Production Build
 ```bash
@@ -259,6 +269,9 @@ Most realistic test but slow iteration (rebuild for each change).
 - `config.ts` - Server URL configuration
 - `PROJECT.md` - Main documentation
 - `README.md` - Project overview
+- `Dockerfile` - Docker dev environment
+- `docker-compose.yml` - Docker Compose config
+- `.dockerignore` - Docker build exclusions
 - All screen files and components
 
 **Can be safely deleted (legacy/unused):**

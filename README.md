@@ -69,7 +69,7 @@ A React Native chess app for **true local network multiplayer** - play chess wit
 └─────────────────────┘         └─────────────────────┘
 ```
 
-> **Design note:** The developer is aware that either in-app role (host or guest) could technically work over either a WiFi network **or** a phone hotspot. The two modes are intentionally kept separate — assigning fixed roles per mode reduces confusion and lets the app give clear, role-specific instructions. Specifically, in Hotspot mode the phone that *turns on the hotspot* cannot read a usable IP address (it reports `0.0.0.0`), so the **host** should be the phone that *connects to the opponent's hotspot* and the **guest** is the one that keeps its hotspot turned on.
+> **Design note:** The developer is aware that either in-app role (host or guest) could technically work over either a WiFi network **or** a phone hotspot. The two modes are intentionally kept separate — assigning fixed roles per mode reduces confusion and lets the app give clear, role-specific instructions. Specifically, in Hotspot mode the phone that _turns on the hotspot_ cannot read a usable IP address (it reports `0.0.0.0`), so the **host** should be the phone that _connects to the opponent's hotspot_ and the **guest** is the one that keeps its hotspot turned on.
 
 **Setup Steps:**
 
@@ -113,6 +113,16 @@ npm install
 # Start development server
 npx expo start
 ```
+
+### Docker (Development Environment)
+
+```bash
+# IMPORTANT: Set your host machine's LAN IP in docker-compose.yml
+# then run:
+docker compose up --build
+```
+
+Set `REACT_NATIVE_PACKAGER_HOSTNAME` in `docker-compose.yml` to your host machine's LAN IP (run `ip addr` or `ipconfig` to find it). Connect your development build to the QR code printed by Metro.
 
 ### Building APK
 
@@ -187,12 +197,20 @@ Install on both test phones, then:
 npx expo start --dev-client
 ```
 
+**Using Docker:**
+
+```bash
+# Set your LAN IP in docker-compose.yml, then:
+docker compose up --build
+```
+
 **Benefits:**
 
 - Fast iteration with hot reload
 - Console logs visible
 - Native modules included
 - Real device testing
+- Reproducible dev environment via Docker
 
 **Production Build:**
 
@@ -269,7 +287,7 @@ These are inherent to the peer-to-peer architecture and prioritize privacy/local
 
 - Ensure both phones selected the same connection mode
 - **WiFi Mode:** Both phones must be on same WiFi network
-- **Hotspot Mode:** The *guest* turns their hotspot ON and the *host* connects to it (the hotspot owner's IP is `0.0.0.0` and can't be used to join)
+- **Hotspot Mode:** The _guest_ turns their hotspot ON and the _host_ connects to it (the hotspot owner's IP is `0.0.0.0` and can't be used to join)
 - Verify host's IP address is correct (format: 192.168.1.100)
 - Check firewall not blocking port 3001
 - Ensure host has started hosting before guest tries to join
